@@ -7,3 +7,5 @@ This is our new repo continuing our drone project.
   -better README
   
   -cleaning out of unecessary files
+  
+  -errors folder
