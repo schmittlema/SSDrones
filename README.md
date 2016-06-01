@@ -4,11 +4,11 @@
 This is our new repo continuing our drone project.
 
 ##### Updates include:
-  -better README
+  -Better README
   
-  -cleaning out of unecessary files
+  -Cleaning out of unecessary files
   
-  -errors folder
+  -Errors folder
 
 ##### To Run:
   1. Be in deepq directory
