@@ -49,7 +49,7 @@ class GameObject(object):
         color = self.settings["colors"][self.obj_type]
         return svg.Circle(self.position + Point2(10, 10), self.radius, color=color)
 
-class KarpathyGame(object):
+class Main(object):
     def __init__(self, settings):
         """Initiallize game simulator with settings"""
         self.settings = settings
