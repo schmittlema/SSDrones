@@ -2,7 +2,7 @@ import numpy as np
 import random
 import tensorflow as tf
 import os.path
-import pickle
+import dill
 
 from collections import deque
 
@@ -263,9 +263,13 @@ class DiscreteDeepQ(object):
     
     def saveNetwork(self):
         path = "../saved_brains/"
-        name = "Brain:_" + self.bN +".pkl"
+        name = "Brain:_" + self.bN +".txt"
         name = os.path.join(path,name)
         wtf = open(name,"wb")
-        pickle.dump(self.target_network_update,wtf)
-        #wtf.write(self.input_layer)
+        wtf.write("f@#k!")
         wtf.close()
+        
+        
+        
+        
+        
