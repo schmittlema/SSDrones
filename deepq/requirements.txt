@@ -1,2 +1,5 @@
+Everything Below must be installed on python 2.7:
 future==0.15.2
 euclid==0.1
+matplotlib
+ipython -jupyter notebook not needed

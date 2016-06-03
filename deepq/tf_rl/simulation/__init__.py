@@ -1,2 +1,2 @@
-from .karpathy_game   import KarpathyGame
+from .Main   import Main
 

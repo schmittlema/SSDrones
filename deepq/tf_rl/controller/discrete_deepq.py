@@ -1,6 +1,8 @@
 import numpy as np
 import random
 import tensorflow as tf
+import os.path
+import pickle
 
 from collections import deque
 
@@ -9,7 +11,7 @@ class DiscreteDeepQ(object):
                        num_actions,
                        observation_to_actions,
                        optimizer,
-                       session,
+                       session,b,
                        random_action_probability=0.05,
                        exploration_period=1000,
                        store_every_nth=5,
@@ -76,6 +78,8 @@ class DiscreteDeepQ(object):
             writer to log metrics
         """
         # memorize arguments
+        self.count = 0
+        self.bN = b
         self.observation_size          = observation_size
         self.num_actions               = num_actions
 
@@ -196,8 +200,8 @@ class DiscreteDeepQ(object):
         self.number_of_times_store_called += 1
 
     def training_step(self):
-        """Pick a self.minibatch_size exeperiences from reply buffer
-        and backpropage the value function.
+        """Pick a self.minibatch_size experiences from reply buffer
+        and backprop the value function.
         """
         if self.number_of_times_train_called % self.train_every_nth == 0:
             if len(self.experience) <  self.minibatch_size:
@@ -244,6 +248,11 @@ class DiscreteDeepQ(object):
             })
 
             self.s.run(self.target_network_update)
+            
+            self.count = self.count +1 
+            if(self.count == 5):
+                self.count = 0
+                self.saveNetwork()
 
             if calculate_summaries:
                 self.summary_writer.add_summary(summary_str, self.iteration)
@@ -251,3 +260,12 @@ class DiscreteDeepQ(object):
             self.iteration += 1
 
         self.number_of_times_train_called += 1
+    
+    def saveNetwork(self):
+        path = "../saved_brains/"
+        name = "Brain:_" + self.bN +".pkl"
+        name = os.path.join(path,name)
+        wtf = open(name,"wb")
+        pickle.dump(self.target_network_update,wtf)
+        #wtf.write(self.input_layer)
+        wtf.close()
