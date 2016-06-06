@@ -2,7 +2,6 @@ import numpy as np
 import random
 import tensorflow as tf
 import os.path
-import dill
 
 from collections import deque
 
@@ -80,6 +79,8 @@ class DiscreteDeepQ(object):
         # memorize arguments
         self.count = 0
         self.bN = b
+        self.saver = tf.train.Saver()
+        
         self.observation_size          = observation_size
         self.num_actions               = num_actions
 
@@ -185,6 +186,7 @@ class DiscreteDeepQ(object):
             return random.randint(0, self.num_actions - 1)
         else:
             return self.s.run(self.predicted_actions, {self.observation: observation[np.newaxis,:]})[0]
+       
 
     def store(self, observation, action, reward, newobservation):
         """Store experience, where starting with observation and
@@ -248,7 +250,6 @@ class DiscreteDeepQ(object):
             })
 
             self.s.run(self.target_network_update)
-            
             self.count = self.count +1 
             if(self.count == 5):
                 self.count = 0
@@ -262,13 +263,9 @@ class DiscreteDeepQ(object):
         self.number_of_times_train_called += 1
     
     def saveNetwork(self):
-        path = "../saved_brains/"
-        name = "Brain:_" + self.bN +".txt"
-        name = os.path.join(path,name)
-        wtf = open(name,"wb")
-        wtf.write("f@#k!")
-        wtf.close()
-        
+        name = "../saved_brains/" + self.bN + ".ckpt"
+        self.saver.save(self.s, name)
+
         
         
         

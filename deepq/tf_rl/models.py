@@ -81,7 +81,12 @@ class MLP(object):
         for layer in self.layers:
             res.extend(layer.variables())
         return res
-
+    
+    def toString(self):
+        out = self.input_layer.Ws[0].eval()
+        return out
+        
+    
     def copy(self, scope=None):
         scope = scope or self.scope + "_copy"
         nonlinearities = [self.input_nonlinearity] + self.layer_nonlinearities
