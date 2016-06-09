@@ -25,7 +25,7 @@ def simulate(simulation,
     Parameters
     -------
     simulation: tr_lr.simulation
-        simulation that will be simulated ;-)
+        simulation that will be simulated
     controller: tr_lr.controller
         controller used
     fps: int

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import time
+import Mazes
 
 from collections import defaultdict
 from euclid import Circle, Point2, Vector2, LineSegment2
@@ -63,15 +64,24 @@ class Main(object):
                                Vector2(*self.settings["hero_initial_speed"]),
                                "hero",
                                self.settings)
-        self.maze = {}
+        self.maze = []
         self.mazeindex = 0
+        self.mazeIterator = 0
+        self.mazeObject = Mazes.Maze()
         self.makeMaze()
+        
+        
+        self.successArray = []
+        self.successRate = 0.0
+        self.runs = 0
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
 
         self.objects = []
         for obj_type, number in settings["num_objects"].items():
+            if(obj_type == "enemy"):
+                number = len(self.maze)
             for _ in range(number):
                 self.spawn_object(obj_type)
 
@@ -92,25 +102,9 @@ class Main(object):
         self.objects_eaten = defaultdict(lambda: 0)
     
     def makeMaze(self):
-        y = 10
-        x = 0
-        for i in range(0,108):
-            x = i % 14
-            if(i % 18==0):
-                y += 80
-                
-            self.maze[i] = Point2(10 + (x*50),y)
-            
-        for j in range(0,35):
-            self.maze[j+108] = Point2(-5 + (j*20),-5)
-        for j in range(0,35):
-            self.maze[j+143] = Point2(-5 + (j*20),500)
-            
-        for j in range(0,25):
-            self.maze[j+178] = Point2(-5,-5+(j*20))
-        for j in range(0,26):
-            self.maze[j+203] = Point2(700,-5+(j*20))
-
+        self.maze = self.mazeObject.getMaze(self.mazeIterator)
+        self.hero.position = self.mazeObject.getHeroPos()
+        self.mazeIterator += 1
         
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
@@ -122,8 +116,7 @@ class Main(object):
         """Spawn object of a given type and add it to the objects array"""
         radius = self.settings["object_radius"]
         if(obj_type == 'friend'):
-            position = Point2(50, 30)
-        
+            position = self.mazeObject.getGoalPos()
         else:
             position = self.maze[self.mazeindex]
             self.mazeindex += 1 
@@ -144,20 +137,46 @@ class Main(object):
     def squared_distance(self, p1, p2):
         return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
 
+    def updateSuccess(self,ob):
+        if(len(self.successArray) == 10):
+                self.successArray = self.successArray[1:]
+        if ob.obj_type == "friend":
+            self.successArray.append(1)
+        if ob.obj_type == "enemy":
+            self.successArray.append(0)
+        self.successRate = sum(self.successArray,0.0)/float(len(self.successArray))
+    
+    def nextMaze(self):
+        if(self.runs >= 100 and self.successRate >= 0.8):
+            self.runs = 0
+            self.objects_eaten["friend"] = 0
+            self.objects_eaten["enemy"] = 0
+            self.successRate = 0.0
+            self.successArray = []
+            self.makeMaze()
+            self.mazeindex = 0
+            for obj_type, number in self.settings["num_objects"].items():
+                if(obj_type == "enemy"):
+                    number = len(self.maze)
+                for _ in range(number):
+                    self.spawn_object(obj_type)
+            
     def resolve_collisions(self):
-        """If hero touches, hero eats. Also reward gets updated."""
+        """If hero touches, hero restarts and reward is updated."""
         collision_distance = 2 * self.settings["object_radius"]
         collision_distance2 = collision_distance ** 2
         to_remove = []
         for obj in self.objects:
             if self.squared_distance(self.hero.position, obj.position) < collision_distance2:
                 to_remove.append(obj)
+                self.updateSuccess(obj)
+                self.runs += 1
+                self.nextMaze()
         for obj in to_remove:
-            """if (obj.obj_type == "friend"):
-                self.objects.remove(obj)"""
             self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
-            self.hero.position = Point2(*self.settings["hero_initial_position"])
+            self.hero.position = self.mazeObject.getHeroPos()
+            
 
     def inside_walls(self, point):
         """Check if the point is inside the walls"""
@@ -261,7 +280,7 @@ class Main(object):
     
     
     def distance_to_goal(self):
-        return -self.hero.position.distance(Point2(50,30))
+        return -self.hero.position.distance(self.mazeObject.getGoalPos())
     
                                            
     def collect_reward(self):
@@ -311,9 +330,10 @@ class Main(object):
         recent_reward = self.collected_rewards[-100:] + [0]
         objects_eaten_str = ', '.join(["%s: %s" % (o,c) for o,c in self.objects_eaten.items()])
         stats.extend([
-            "nearest wall = %.1f" % (self.distance_to_walls(),),
-            "reward       = %1f" % (self.collected_rewards[-1],),#sum(recent_reward)/len(recent_reward),),
-            "objects eaten => %s" % (objects_eaten_str,),
+            "Reward       = %1f" % (self.collected_rewards[-1],),#sum(recent_reward)/len(recent_reward),),
+            "Objects Eaten => %s" % (objects_eaten_str,),
+            "Percent Success (last 10) => %1f " % self.successRate,
+            "Runs => %d" % self.runs,
         ])
 
         scene = svg.Scene((self.size[0] + 20, self.size[1] + 20 + 20 * len(stats)))
