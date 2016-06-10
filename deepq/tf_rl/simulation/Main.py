@@ -10,15 +10,15 @@ from euclid import Circle, Point2, Vector2, LineSegment2
 import tf_rl.utils.svg as svg
 
 class GameObject(object):
-    def __init__(self, position, speed, obj_type, settings):
+    def __init__(self, position, speed, acceleration, obj_type, settings):
         """Esentially represents circles of different kinds, which have
         position and speed."""
         self.settings = settings
         self.radius = self.settings["object_radius"]
-
         self.obj_type = obj_type
         self.position = position
-        self.speed    = speed
+        self.speed = speed 
+        self.acceleration= acceleration
         self.bounciness = 1.0
 
     def wall_collisions(self):
@@ -33,7 +33,8 @@ class GameObject(object):
 
     def move(self, dt):
         """Move as if dt seconds passed"""
-        self.position += dt * self.speed
+        self.speed+= dt*self.acceleration
+        self.position+= dt*self.speed
         self.position = Point2(*self.position)
 
     def step(self, dt):
@@ -61,6 +62,7 @@ class Main(object):
 
         self.hero = GameObject(Point2(*self.settings["hero_initial_position"]),
                                Vector2(*self.settings["hero_initial_speed"]),
+                               Vector2(*self.settings["hero_initial_accel"]),
                                "hero",
                                self.settings)
         self.maze = {}
@@ -85,7 +87,7 @@ class Main(object):
         self.eye_observation_size = len(self.settings["objects"]) + 3
         # additionally there are two numbers representing agents own speed and position.
         self.observation_size = self.eye_observation_size * len(self.observation_lines) + 2 + 2
-
+        #directions of movement  
         self.directions = [Vector2(*d) for d in [[1,0], [0,1], [-1,0],[0,-1],[0.0,0.0]]]
         self.num_actions      = len(self.directions)
 
@@ -114,9 +116,11 @@ class Main(object):
         
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
-        assert 0 <= action_id < self.num_actions
-        self.hero.speed *= 0.5
-        self.hero.speed += self.directions[action_id] * self.settings["delta_v"]
+        assert 0 <= action_id < self.num_actions #check to see if valid action
+        #self.hero.speed *= 0.5
+        #self.hero.speed += self.directions[action_id] * self.settings["delta_v"]
+        self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
+        
 
     def spawn_object(self, obj_type):
         """Spawn object of a given type and add it to the objects array"""
@@ -130,8 +134,8 @@ class Main(object):
 
         max_speed = np.array(self.settings["maximum_speed"])
         speed = Vector2(0, 0)
-
-        self.objects.append(GameObject(position, speed, obj_type, self.settings))
+        acceleration = Vector2(0,0)
+        self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
 
     def step(self, dt):
         """Simulate all the objects for a given ammount of time.
