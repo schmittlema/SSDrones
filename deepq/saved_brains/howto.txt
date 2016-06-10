@@ -1,0 +1,3 @@
+NOTE: This file must remain in here for gitHub to keep the folder
+
+This folder contains the saved brains you can reload using option B when you run the code
