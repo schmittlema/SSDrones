@@ -30,7 +30,7 @@ class Maze(object):
     def wallsOnly(self):
         maze = []
         self.heroPos = Point2(45,250)
-        self.goalPos = Point2(80,250)
+        self.goalPos = Point2(655,250)
         for j in range(0,35):
             maze.append(Point2(-5 + (j*20),-5))
         for j in range(0,35):
