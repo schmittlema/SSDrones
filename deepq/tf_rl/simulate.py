@@ -68,8 +68,11 @@ def simulate(simulation,
     last_action      = None
 
     simulation_started_time = time.time()
-
-    for frame_no in count():
+    
+    frame_no = 0
+    running = True
+    timeStart = simulation_started_time
+    while running:
         for _ in range(chunks_per_frame):
             simulation.step(chunk_length_s)
 
@@ -91,13 +94,15 @@ def simulate(simulation,
             # update current state as last state.
             last_action = new_action
             last_observation = new_observation
-
+            
+            
+                 
         # adding 1 to make it less likely to happen at the same time as
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
             clear_output(wait=True)
-            svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
+            svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,),simulation.timeOut,simulation.timeoutArray])
             display(svg_html)
             if save_path is not None:
                 img_path = join(save_path, "%d.svg" % (last_image,))
@@ -109,3 +114,5 @@ def simulate(simulation,
         time_passed = (time.time() - simulation_started_time)
         if wait and (time_should_have_passed > time_passed):
             time.sleep(time_should_have_passed - time_passed)
+            
+        frame_no +=1

@@ -4,10 +4,12 @@ import numpy as np
 import random
 import time
 import Mazes
+import os
 
 from collections import defaultdict
 from euclid import Circle, Point2, Vector2, LineSegment2
 
+import tf_rl.simulate
 import tf_rl.utils.svg as svg
 
 class GameObject(object):
@@ -51,7 +53,7 @@ class GameObject(object):
         return svg.Circle(self.position + Point2(10, 10), self.radius, color=color)
 
 class Main(object):
-    def __init__(self, settings):
+    def __init__(self, settings,brainName):
         """Initiallize game simulator with settings"""
         self.settings = settings
         self.size  = self.settings["world_size"]
@@ -64,16 +66,26 @@ class Main(object):
                                Vector2(*self.settings["hero_initial_speed"]),
                                "hero",
                                self.settings)
+        self.brainName = brainName
         self.maze = []
         self.mazeindex = 0
         self.mazeIterator = 0
         self.mazeObject = Mazes.Maze()
         self.makeMaze()
-        
+        self.startTime = time.strftime("%d:%m:%Y:%H")
         
         self.successArray = []
         self.successRate = 0.0
+        self.crashRate = 0.0
+        self.timeOut = 0
+        self.timeStart = time.time()
+        self.timeoutArray = []
         self.runs = 0
+        
+        #Stats for overall
+        self.averageRuns = []
+        self.averageSuccessRate = []
+        self.averageTimeout = []
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -102,7 +114,7 @@ class Main(object):
         self.objects_eaten = defaultdict(lambda: 0)
     
     def makeMaze(self):
-        self.maze = self.mazeObject.getMaze(self.mazeIterator)
+        self.maze = self.mazeObject.getMaze(self.mazeIterator)            
         self.hero.position = self.mazeObject.getHeroPos()
         self.mazeIterator += 1
         
@@ -130,9 +142,21 @@ class Main(object):
         """Simulate all the objects for a given ammount of time.
 
         Also resolve collisions with the hero"""
+           
         for obj in self.objects + [self.hero] :
             obj.step(dt)
         self.resolve_collisions()
+        
+    def runComplete(self):
+        self.timeOut = time.time() - self.timeStart
+        if(len(self.timeoutArray) == 10):
+            self.timeoutArray = self.timeoutArray[1:]
+        self.timeoutArray.append(self.timeOut)
+        self.timeStart = time.time() 
+        
+    def runFail(self):
+        self.timeStart = time.time()
+            
 
     def squared_distance(self, p1, p2):
         return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
@@ -142,12 +166,44 @@ class Main(object):
                 self.successArray = self.successArray[1:]
         if ob.obj_type == "friend":
             self.successArray.append(1)
+            self.runComplete()
         if ob.obj_type == "enemy":
             self.successArray.append(0)
+            self.runFail()
         self.successRate = sum(self.successArray,0.0)/float(len(self.successArray))
+        self.crashRate = 1.0 - self.successRate
     
+    def saveData(self):
+        dir = "../RunData/"
+        name =dir + self.brainName + ".txt"
+        wtf = open(name,"a")
+        wtf.write("Maze: " + str(self.mazeIterator -1) + "\n")
+        wtf.write("Runs: " + str(self.runs) + "\n")
+        self.averageRuns.append(self.runs)
+        wtf.write("SuccessRate: " + str(self.successRate) + "\n")
+        self.averageSuccessRate.append(self.successRate)
+        wtf.write("CrashRate: " + str(self.crashRate) + "\n")
+        time = sum(self.timeoutArray,0.0)/float(len(self.timeoutArray))
+        self.averageTimeout.append(time)
+        wtf.write("AverageTimout: " + str(time) + "\n"+"\n")
+        wtf.close()
+
+    def saveTotals(self):
+        dir = "../RunData/"
+        name =dir + self.brainName + ".txt"
+        wtf = open(name,"a")
+        wtf.write("Overall:"+ "\n")
+        wtf.write("Runs: " + str(sum(self.averageRuns,0.0)/float(len(self.averageRuns))) + "\n")
+        success = sum(self.averageSuccessRate,0.0)/float(len(self.averageSuccessRate))
+        wtf.write("SuccessRate: " + str(success) + "\n")
+        wtf.write("CrashRate: " + str(1-success) + "\n")
+        wtf.write("AverageTimout: " + str(sum(self.averageTimeout,0.0)/float(len(self.averageTimeout))) + "\n"+"\n")
+        wtf.close()    
+
     def nextMaze(self):
-        if(self.runs >= 100 and self.successRate >= 0.8):
+        if(self.runs >= 1 and self.successRate >= self.settings["minimum_success_rate"]):
+            self.saveData()
+            self.timeoutArray = []
             self.runs = 0
             self.objects_eaten["friend"] = 0
             self.objects_eaten["enemy"] = 0
@@ -160,7 +216,8 @@ class Main(object):
                     number = len(self.maze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
-            
+
+    
     def resolve_collisions(self):
         """If hero touches, hero restarts and reward is updated."""
         collision_distance = 2 * self.settings["object_radius"]
@@ -171,11 +228,12 @@ class Main(object):
                 to_remove.append(obj)
                 self.updateSuccess(obj)
                 self.runs += 1
-                self.nextMaze()
         for obj in to_remove:
             self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
+            self.nextMaze()
+
             
 
     def inside_walls(self, point):
