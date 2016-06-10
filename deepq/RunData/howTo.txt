@@ -1,0 +1,2 @@
+NOTE: This file must be kept in here for github to keep directory
+Each file contains info on the run given the brainName used when you run code
