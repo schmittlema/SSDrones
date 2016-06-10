@@ -205,7 +205,7 @@ class Main(object):
         wtf.close()    
 
     def nextMaze(self):
-        if(self.runs >= 1 and self.successRate >= self.settings["minimum_success_rate"]):
+        if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
             self.saveData()
             self.timeoutArray = []
             self.runs = 0
