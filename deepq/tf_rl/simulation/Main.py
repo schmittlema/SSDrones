@@ -34,7 +34,7 @@ class GameObject(object):
     def move(self, dt):
         """Move as if dt seconds passed"""
         self.speed+= dt*self.acceleration
-        self.position= dt*self.speed
+        self.position+= dt*self.speed
         self.position = Point2(*self.position)
 
     def step(self, dt):
