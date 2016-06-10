@@ -102,7 +102,7 @@ def simulate(simulation,
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
             clear_output(wait=True)
-            svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,),simulation.timeOut,simulation.timeoutArray])
+            svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
             display(svg_html)
             if save_path is not None:
                 img_path = join(save_path, "%d.svg" % (last_image,))
