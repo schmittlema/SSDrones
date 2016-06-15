@@ -11,6 +11,9 @@ from euclid import Circle, Point2, Vector2, LineSegment2
 
 import tf_rl.simulate
 import tf_rl.utils.svg as svg
+import tf_rl.utils.geometry as geo
+
+from matplotlib.backends.backend_pdf import PdfPages
 
 class GameObject(object):
     def __init__(self, position, speed, acceleration, obj_type, settings):
@@ -45,13 +48,19 @@ class GameObject(object):
         self.wall_collisions()
         self.move(dt)
 
+    def as_square(self):
+        return Square(self.position,float(self.radius),float(self.radius))
+    
     def as_circle(self):
         return Circle(self.position, float(self.radius))
 
     def draw(self):
         """Return svg object for this item."""
         color = self.settings["colors"][self.obj_type]
-        return svg.Circle(self.position + Point2(10, 10), self.radius, color=color)
+        if(self.obj_type == "square"):
+            return svg.Rectangle(self.position - Point2(10,10),Point2(2*self.radius,2*self.radius),color=color)
+        else:
+            return svg.Circle(self.position + Point2(10, 10), self.radius, color=color)
 
 class Main(object):
     def __init__(self, settings,brainName):
@@ -71,10 +80,12 @@ class Main(object):
         self.brainName = brainName
         self.maze = []
         self.mazeindex = 0
+        #Change mazeIterator to change which maze to start on
         self.mazeIterator = 0
         self.mazeObject = Mazes.Maze()
-        self.makeMaze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
+        
+        self.counter = 0
         
         self.successArray = []
         self.successRate = 0.0
@@ -88,6 +99,22 @@ class Main(object):
         self.averageRuns = []
         self.averageSuccessRate = []
         self.averageTimeout = []
+        
+        #Squares
+        self.smaze = []
+        self.smazeindex = 0
+        self.makeMaze()
+        #print self.maze
+            
+        #plot run reward
+        self.runReward = []
+        fileName = brainName + ".pdf"
+        print fileName
+        print brainName + ".txt"
+        self.pp = PdfPages("../RunData/" + fileName)
+        
+        #Timing
+        self.learntime = 0
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -96,6 +123,8 @@ class Main(object):
         for obj_type, number in settings["num_objects"].items():
             if(obj_type == "enemy"):
                 number = len(self.maze)
+            if(obj_type == "square"):
+                number = len(self.smaze)
             for _ in range(number):
                 self.spawn_object(obj_type)
 
@@ -116,7 +145,8 @@ class Main(object):
         self.objects_eaten = defaultdict(lambda: 0)
     
     def makeMaze(self):
-        self.maze = self.mazeObject.getMaze(self.mazeIterator)            
+        self.maze = self.mazeObject.getMaze(self.mazeIterator)
+        self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
         self.hero.position = self.mazeObject.getHeroPos()
         self.mazeIterator += 1
         
@@ -127,29 +157,43 @@ class Main(object):
         #self.hero.speed += self.directions[action_id] * self.settings["delta_v"]
         self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         
-
+    def empty(self,array):
+        return len(array) == 0
+    
     def spawn_object(self, obj_type):
         """Spawn object of a given type and add it to the objects array"""
+        empty = False
         radius = self.settings["object_radius"]
         if(obj_type == 'friend'):
             position = self.mazeObject.getGoalPos()
-        else:
-            position = self.maze[self.mazeindex]
-            self.mazeindex += 1 
+        if(obj_type == "square"):
+            if(not(self.empty(self.smaze))):
+                position = self.smaze[self.smazeindex]
+                self.smazeindex += 1
+            else:
+                empty = True
+        if(obj_type == "enemy"):
+            if(not(self.empty(self.maze))):
+                position = self.maze[self.mazeindex]
+                self.mazeindex += 1 
+            else:
+                empty = True
+        
 
         max_speed = np.array(self.settings["maximum_speed"])
         speed = Vector2(0, 0)
         acceleration = Vector2(0,0)
-        self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
+        if(not empty):
+            self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
 
-    def step(self, dt):
+    def step(self, dt,fps,actionEvery):
         """Simulate all the objects for a given ammount of time.
 
         Also resolve collisions with the hero"""
-           
+        self.counter += 1
         for obj in self.objects + [self.hero] :
             obj.step(dt)
-        self.resolve_collisions()
+        self.resolve_collisions(fps,actionEvery)
         
     def runComplete(self):
         self.timeOut = time.time() - self.timeStart
@@ -171,7 +215,7 @@ class Main(object):
         if ob.obj_type == "friend":
             self.successArray.append(1)
             self.runComplete()
-        if ob.obj_type == "enemy":
+        if ob.obj_type == "enemy" or ob.obj_type == "square":
             self.successArray.append(0)
             self.runFail()
         self.successRate = sum(self.successArray,0.0)/float(len(self.successArray))
@@ -197,11 +241,23 @@ class Main(object):
         name =dir + self.brainName + ".txt"
         wtf = open(name,"a")
         wtf.write("Overall:"+ "\n")
-        wtf.write("Runs: " + str(sum(self.averageRuns,0.0)/float(len(self.averageRuns))) + "\n")
-        success = sum(self.averageSuccessRate,0.0)/float(len(self.averageSuccessRate))
-        wtf.write("SuccessRate: " + str(success) + "\n")
+        try:
+            wtf.write("Runs: " + str(sum(self.averageRuns,0.0)/float(len(self.averageRuns))) + "\n")
+        except(ZeroDivisionError):
+            wtf.write("Runs: " + "\n")
+        try:
+            success = sum(self.averageSuccessRate,0.0)/float(len(self.averageSuccessRate))
+            wtf.write("SuccessRate: " + str(success) + "\n")
+        except(ZeroDivisionError):
+            wtf.write("SuccessRate: " + "\n")
+            success = 1
         wtf.write("CrashRate: " + str(1-success) + "\n")
-        wtf.write("AverageTimout: " + str(sum(self.averageTimeout,0.0)/float(len(self.averageTimeout))) + "\n"+"\n")
+        
+        try:
+            wtf.write("AverageTimout: " + str(sum(self.averageTimeout,0.0)/float(len(self.averageTimeout))) + "\n"+"\n")
+        except(ZeroDivisionError):
+            wtf.write("AverageTimeout: " + "\n" + "\n")
+ 
         wtf.close()    
 
     def nextMaze(self):
@@ -215,29 +271,75 @@ class Main(object):
             self.successArray = []
             self.makeMaze()
             self.mazeindex = 0
+            self.plot_run_reward(smoothing=100)
+            self.runReward = []
+            self.objects = []
             for obj_type, number in self.settings["num_objects"].items():
                 if(obj_type == "enemy"):
                     number = len(self.maze)
+                if(obj_type == "square"):
+                    number = len(self.smaze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
 
-    
-    def resolve_collisions(self):
+    def interSquare(self,hPos,oPos):
+        """Returns wether or not circle intersect rectangle"""
+        rectangleLeft = oPos[0] - self.settings["object_radius"]
+        rectangleRight = oPos[0] + self.settings["object_radius"]
+        rectangleTop = oPos[1] - self.settings["object_radius"]
+        rectangleBottom = oPos[1] + self.settings["object_radius"]
+        
+        point = np.array([hPos[0]+ 10 ,hPos[1]+10])
+        recs = np.array([rectangleLeft,rectangleTop])
+        rece = np.array([rectangleRight,rectangleTop])
+        recsb = np.array([rectangleLeft,rectangleBottom])
+        receb = np.array([rectangleRight,rectangleBottom])
+        
+        recsh = np.array([rectangleLeft,rectangleTop])
+        receh = np.array([rectangleLeft, rectangleBottom])
+        recshr = np.array([rectangleRight, rectangleTop])
+        recehr = np.array([rectangleRight,rectangleBottom])
+        
+        closestXT = geo.point_segment_distance(recs, rece,point)
+        closestXB = geo.point_segment_distance(recsb, receb,point)
+        
+        closestYL = geo.point_segment_distance(recsh, receh,point)
+        closestYR = geo.point_segment_distance(recshr, recehr,point)
+
+        x = (closestXT < self.settings["object_radius"]) or (closestXB < self.settings["object_radius"]) or (closestYL < self.settings["object_radius"]) or (closestYR < self.settings["object_radius"])
+        return x
+
+    def resolve_collisions(self,fps,actionEvery):
         """If hero touches, hero restarts and reward is updated."""
         collision_distance = 2 * self.settings["object_radius"]
         collision_distance2 = collision_distance ** 2
         to_remove = []
+        if(self.counter >= (fps*2) * 60 * self.settings["Timeout"]):
+            obj = GameObject(Point2(200,200), 0.0, 0.0,  "enemy", self.settings)
+            to_remove.append(obj)
+            self.updateSuccess(obj)
+            self.runs += 1
+            print "timout"
         for obj in self.objects:
-            if self.squared_distance(self.hero.position, obj.position) < collision_distance2:
+            if(obj.obj_type == "square"):
+                if(self.interSquare(self.hero.position,obj.position)):
+                    to_remove.append(obj)
+                    self.updateSuccess(obj)
+                    self.runs += 1
+            elif self.squared_distance(self.hero.position, obj.position) < collision_distance2:
                 to_remove.append(obj)
                 self.updateSuccess(obj)
                 self.runs += 1
         for obj in to_remove:
-            self.objects_eaten[obj.obj_type] += 1
+            if(obj.obj_type == "square"):
+                self.objects_eaten["enemy"] += 1
+            else:
+                self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
             self.hero.speed = Vector2(*self.settings["hero_initial_speed"])
             self.hero.acceleration = Vector2(*self.settings["hero_initial_accel"])
+            self.counter = 0
             self.nextMaze()
 
             
@@ -247,6 +349,34 @@ class Main(object):
         EPS = 1e-4
         return (EPS <= point[0] < self.size[0] - EPS and
                 EPS <= point[1] < self.size[1] - EPS)
+
+    def squareDistance(self,square,line):
+        x1 = line.p1[0]
+        y1 = line.p1[1]
+        x2 = line.p2[0]
+        y2 = line.p2[1]
+        minX = square.position[0] - self.settings["object_radius"]
+        maxX = square.position[0] + self.settings["object_radius"]
+        minY = square.position[1] - self.settings["object_radius"]
+        maxY = square.position[1] + self.settings["object_radius"]
+        if ((x1 <= minX and x2 <= minX) or (y1 <= minY and y2 <= minY) or (x1 >= maxX and x2 >= maxX) or (y1 >= maxY and y2 >= maxY)):
+            return False
+
+        m = (y2 - y1) / (x2 - x1)
+        y = m * (minX - x1) + y1
+        if (y > minY and y < maxY):
+            return True
+        y = m * (maxX - x1) + y1
+        if (y > minY and y < maxY):
+            return True
+        x = (minY - y1) / m + x1
+        if (x > minX and x < maxX):
+            return True
+        x = (maxY - y1) / m + x1
+        if (x > minX and x < maxX):
+            return True
+
+        return False
 
     def observe(self):
         """Return observation vector. For all the observation directions it returns representation
@@ -305,13 +435,19 @@ class Main(object):
             elif observed_object is not None: # agent seen
                 object_type_id = self.settings["objects"].index(observed_object.obj_type)
                 speed_x, speed_y = tuple(observed_object.speed)
-                intersection_segment = obj.as_circle().intersect(observation_line)
-                #assert intersection_segment is not None
-                try:
-                    proximity = min(intersection_segment.p1.distance(self.hero.position),
+                if(observed_object.obj_type != "square"):
+                    intersection_segment = obj.as_circle().intersect(observation_line)
+                    #assert intersection_segment is not None
+                    try:
+                        proximity = min(intersection_segment.p1.distance(self.hero.position),
                                     intersection_segment.p2.distance(self.hero.position))
-                except AttributeError:
-                    proximity = observable_distance
+                    except AttributeError:
+                        proximity = observable_distance
+                else:
+                    try:
+                        proximity = self.squareDistance(observed_object,observation_line)
+                    except(ZeroDivisionError):
+                        proximity = 0
             for object_type_idx_loop in range(num_obj_types):
                 observation[observation_offset + object_type_idx_loop] = 1.0
             if object_type_id is not None:
@@ -354,6 +490,7 @@ class Main(object):
         #assert wall_reward < 1e-3, "You are rewarding hero for being close to the wall!"
         togoal = self.distance_to_goal()/1000
         total_reward = self.object_reward + togoal
+        self.runReward.append(total_reward)
         self.collected_rewards.append(total_reward)
         self.object_reward = 0
         return total_reward
@@ -370,6 +507,30 @@ class Main(object):
             chunk = plottable[i-smoothing:i]
             x.append(sum(chunk) / len(chunk))
         plt.plot(list(range(len(x))), x)
+        plt.xlabel('Frames')
+        plt.ylabel('Reward')
+        plt.title('Average Reward Overall')
+        plt.savefig(self.pp, format='pdf')
+        self.pp.close()
+
+   
+    def plot_run_reward(self, smoothing = 30):
+        """Plot evolution of reward over time."""
+        plottable = self.runReward[:]
+        while len(plottable) > 1000:
+            for i in range(0, len(plottable) - 1, 2):
+                plottable[i//2] = (plottable[i] + plottable[i+1]) / 2
+            plottable = plottable[:(len(plottable) // 2)]
+        x = []
+        for  i in range(smoothing, len(plottable)):
+            chunk = plottable[i-smoothing:i]
+            x.append(sum(chunk) / len(chunk))
+        plt.plot(list(range(len(x))), x)
+        plt.xlabel('Frames')
+        plt.ylabel('Reward')
+        plt.title(str(self.mazeIterator -2))
+        plt.savefig(self.pp, format='pdf')
+
 
     def generate_observation_lines(self):
         """Generate observation segments in settings["num_observation_lines"] directions"""
@@ -381,7 +542,7 @@ class Main(object):
             rotation = Point2(math.cos(angle), math.sin(angle))
             current_start = Point2(start[0] * rotation[0], start[1] * rotation[1])
             current_end   = Point2(end[0]   * rotation[0], end[1]   * rotation[1])
-            result.append( LineSegment2(current_start, current_end))
+            result.append(LineSegment2(current_start, current_end))
         return result
 
     def _repr_html_(self):
@@ -398,6 +559,8 @@ class Main(object):
             "Objects Eaten => %s" % (objects_eaten_str,),
             "Percent Success (last 10) => %1f " % self.successRate,
             "Runs => %d" % self.runs,
+            "Maze # : %d" % (self.mazeIterator -1)
+            #"seconds: %.1f" % (self.counter/400)
         ])
 
         scene = svg.Scene((self.size[0] + 20, self.size[1] + 20 + 20 * len(stats)))
@@ -408,7 +571,7 @@ class Main(object):
             scene.add(svg.Line(line.p1 + self.hero.position + Point2(10,10),
                                line.p2 + self.hero.position + Point2(10,10)))
 
-        for obj in self.objects + [self.hero] :
+        for obj in self.objects + [self.hero]:
             scene.add(obj.draw())
 
         offset = self.size[1] + 15

@@ -74,7 +74,7 @@ def simulate(simulation,
     timeStart = simulation_started_time
     while running:
         for _ in range(chunks_per_frame):
-            simulation.step(chunk_length_s)
+            simulation.step(chunk_length_s,fps,action_every)
 
         if frame_no % action_every == 0:
             new_observation = simulation.observe()
@@ -88,9 +88,15 @@ def simulate(simulation,
             simulation.perform_action(new_action)
 
             #train
+            start = time.time()
             if not disable_training:
                 controller.training_step()
-
+                
+            elapsed_time = time.time() - start
+            #print elapsed_time
+            simulation.learntime += elapsed_time
+            start = 0
+            
             # update current state as last state.
             last_action = new_action
             last_observation = new_observation
@@ -109,7 +115,9 @@ def simulate(simulation,
                 with open(img_path, "w") as f:
                     svg_html.write_svg(f)
                 last_image += 1
-
+        
+       
+        
         time_should_have_passed = frame_no / fps
         time_passed = (time.time() - simulation_started_time)
         if wait and (time_should_have_passed > time_passed):
