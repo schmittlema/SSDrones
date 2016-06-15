@@ -236,6 +236,8 @@ class Main(object):
             self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
+            self.hero.speed = Vector2(*self.settings["hero_initial_speed"])
+            self.hero.acceleration = Vector2(*self.settings["hero_initial_accel"])
             self.nextMaze()
 
             
