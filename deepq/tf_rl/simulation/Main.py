@@ -104,14 +104,15 @@ class Main(object):
         self.object_reward = 0
         self.collected_rewards = []
 
-        # every observation_line sees one of objects or wall and
-        # two numbers representing speed of the object (if applicable)
-        self.eye_observation_size = len(self.settings["objects"]) + 3
-        # additionally there are two numbers representing agents own speed and position.
+        # every observation_line sees the nearest friend or enemy
+        #edit: agent is no longer able to see walls or the speed of the nearest object bc these things have been taken out
+        self.eye_observation_size = len(self.settings["objects"])
+        # additionally there are two numbers representing the heading vector  and the objects position.
         self.observation_size = self.eye_observation_size * len(self.observation_lines) + 2 + 2
+        print("observation size: ", self.observation_size)
         #directions of movement  
         self.directions = [Vector2(*d) for d in [[1,0], [0,1], [-1,0],[0,-1],[0.0,0.0]]]
-        self.num_actions      = len(self.directions)
+        self.num_actions = len(self.directions)
 
         self.objects_eaten = defaultdict(lambda: 0)
     
@@ -205,6 +206,7 @@ class Main(object):
         wtf.close()    
 
     def nextMaze(self):
+        """see if the agent has met the criteria for advancement, advance if it has"""
         if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
             self.saveData()
             self.timeoutArray = []
@@ -236,6 +238,9 @@ class Main(object):
             self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
+            #reset the speed and acceleration of the hero, not sure if this is in the right place 
+            self.speed=Vector2(self.settings["hero_initial_speed"])
+            self.acceleration=Vector2(self.settings["hero_initial_accel"])
             self.nextMaze()
 
             
@@ -251,7 +256,7 @@ class Main(object):
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
         """
-        num_obj_types = len(self.settings["objects"]) + 1 # and wall
+        num_obj_types = len(self.settings["objects"]) #modified to remove wall
         max_speed_x, max_speed_y = self.settings["maximum_speed"]
 
         observable_distance = self.settings["observation_line_length"]
@@ -267,9 +272,8 @@ class Main(object):
             # shift to hero position
             observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
                                             self.hero.position + Vector2(*observation_line.p2))
-
             observed_object = None
-            # if end of observation line is outside of walls, we see the wall.
+            #if end of observation line is outside of walls, we see the wall.
             if not self.inside_walls(observation_line.p2):
                 observed_object = "**wall**"
             for obj in relevant_objects:
@@ -331,7 +335,13 @@ class Main(object):
 
         return observation
     
-
+    def get_heading(self):
+        """calculate heading vector"""
+        dx=self.mazeObject.getGoalPos()[0]-self.hero.position[0]
+        dy=self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+        m=math.sqrt(dx**2+dy**2)
+        return [dx/m , dy/m]
+        
     
     def distance_to_walls(self):
         """Returns distance of a hero to walls"""
