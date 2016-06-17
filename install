@@ -1,0 +1,20 @@
+#!/bash/sh
+
+sudo apt-get update
+
+#Install PiP
+sudo apt-get install python-pip python-dev build-essential 
+sudo pip install --upgrade pip 
+sudo pip install --upgrade virtualenv 
+
+#Install Euclid and Future
+sudo pip install euclid
+sudo pip install future
+
+#Install IPython
+sudo pip install ipython[all]
+
+#Install matplotlib
+sudo apt-get install python-matplotlib
+
+echo "Complete!"
