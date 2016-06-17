@@ -286,10 +286,8 @@ class Main(object):
                                     intersection_segment.p2.distance(self.hero.position))
                 except AttributeError:
                     proximity = observable_distance
-            for object_type_idx_loop in range(num_obj_types):
-                observation[i] = 1.0
-            if object_type_id ==1:
-                observation[i] = proximity / observable_distance
+                    
+            observation[i] = proximity# / observable_distance
             #assert num_obj_types + 2 == self.eye_observation_size
             #observation_offset += self.eye_observation_size
         
