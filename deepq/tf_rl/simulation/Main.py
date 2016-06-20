@@ -263,7 +263,7 @@ class Main(object):
         # objects sorted from closest to furthest
         relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
 
-        observation = np.zeros(self.observation_size)
+        observation = np.ones(self.observation_size)
         #observation_offset = 0
         for i, observation_line in enumerate(self.observation_lines):
             # shift to hero position
@@ -287,7 +287,7 @@ class Main(object):
                 except AttributeError:
                     proximity = observable_distance
                     
-            observation[i] = proximity# / observable_distance
+            observation[i] = proximity / observable_distance
             #assert num_obj_types + 2 == self.eye_observation_size
             #observation_offset += self.eye_observation_size
         
