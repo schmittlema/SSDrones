@@ -261,12 +261,8 @@ class Main(object):
         wtf.close()    
 
     def nextMaze(self):
-<<<<<<< HEAD
-        if(self.runs >= 2 and self.successRate >= self.settings["minimum_success_rate"]):
-=======
         """see if the agent has met the criteria for advancement, advance if it has"""
         if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
->>>>>>> heading
             self.saveData()
             self.timeoutArray = []
             self.runs = 0
@@ -342,15 +338,9 @@ class Main(object):
                 self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
-<<<<<<< HEAD
             self.hero.speed = Vector2(*self.settings["hero_initial_speed"])
             self.hero.acceleration = Vector2(*self.settings["hero_initial_accel"])
             self.counter = 0
-=======
-            #reset the speed and acceleration of the hero, not sure if this is in the right place 
-            self.speed=Vector2(self.settings["hero_initial_speed"])
-            self.acceleration=Vector2(self.settings["hero_initial_accel"])
->>>>>>> heading
             self.nextMaze()
 
             
@@ -418,7 +408,6 @@ class Main(object):
             proximity = 0
             if observed_object is not None: # object seen
                 object_type_id = self.settings["objects"].index(observed_object.obj_type)
-<<<<<<< HEAD
                 speed_x, speed_y = tuple(observed_object.speed)
                 if(observed_object.obj_type != "square"):
                     intersection_segment = obj.as_circle().intersect(observation_line)
@@ -433,32 +422,8 @@ class Main(object):
                         proximity = self.squareDistance(observed_object,observation_line)
                     except(ZeroDivisionError):
                         proximity = 0
-            for object_type_idx_loop in range(num_obj_types):
-                observation[observation_offset + object_type_idx_loop] = 1.0
-            if object_type_id is not None:
-                observation[observation_offset + object_type_id] = proximity / observable_distance
-            observation[observation_offset + num_obj_types] =     speed_x   / max_speed_x
-            observation[observation_offset + num_obj_types + 1] = speed_y   / max_speed_y
-            assert num_obj_types + 2 == self.eye_observation_size
-            observation_offset += self.eye_observation_size
-
-        observation[observation_offset]     = self.hero.speed[0] / max_speed_x
-        observation[observation_offset + 1] = self.hero.speed[1] / max_speed_y
-        observation_offset += 2
-=======
-                intersection_segment = obj.as_circle().intersect(observation_line)
-                #assert intersection_segment is not None
-                try:
-                    proximity = min(intersection_segment.p1.distance(self.hero.position),
-                                    intersection_segment.p2.distance(self.hero.position))
-                except AttributeError:
-                    proximity = observable_distance
-                    
+                   
             observation[i] = proximity / observable_distance
-            #assert num_obj_types + 2 == self.eye_observation_size
-            #observation_offset += self.eye_observation_size
->>>>>>> heading
-        
         
         #add hero velocity to the  observation vector
         observation[self.observation_size-4]     = self.hero.speed[0] 
@@ -468,17 +433,9 @@ class Main(object):
         observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
         observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
         
-        #assert observation_offset + 2 == self.observation_size
         print(observation)
         return observation
-    
-    '''def get_heading(self):
-        """calculate heading vector"""
-        dx=self.mazeObject.getGoalPos()[0]-self.hero.position[0]
-        dy=self.mazeObject.getGoalPos()[1]-self.hero.position[1]
-        #m=math.sqrt(dx**2+dy**2)
-        return (dx , dy)'''
-        
+   
     
     def distance_to_walls(self):
         """Returns distance of a hero to walls"""
