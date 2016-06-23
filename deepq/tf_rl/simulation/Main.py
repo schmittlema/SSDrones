@@ -388,7 +388,7 @@ class Main(object):
         observable_distance = self.settings["observation_line_length"]
 
         relevant_objects = [obj for obj in self.objects
-                            if obj.position.distance(self.hero.position) < observable_distance]
+                            if obj.position.distance(self.hero.position) < observable_distance and obj.obj_type !="friend"]
         # objects sorted from closest to furthest
         relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
 
@@ -405,13 +405,13 @@ class Main(object):
                     observed_object = obj
                     break
             object_type_id = None
-            proximity = 0
+            proximity = observable_distance
             if observed_object is not None: # object seen
                 object_type_id = self.settings["objects"].index(observed_object.obj_type)
                 speed_x, speed_y = tuple(observed_object.speed)
                 if(observed_object.obj_type != "square"):
                     intersection_segment = obj.as_circle().intersect(observation_line)
-                    #assert intersection_segment is not None
+                    assert intersection_segment is not None
                     try:
                         proximity = min(intersection_segment.p1.distance(self.hero.position),
                                     intersection_segment.p2.distance(self.hero.position))
@@ -422,7 +422,8 @@ class Main(object):
                         proximity = self.squareDistance(observed_object,observation_line)
                     except(ZeroDivisionError):
                         proximity = 0
-                   
+            
+
             observation[i] = proximity / observable_distance
         
         #add hero velocity to the  observation vector
