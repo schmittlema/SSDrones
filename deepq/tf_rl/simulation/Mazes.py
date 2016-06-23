@@ -28,8 +28,10 @@ class Maze(object):
             self.heroPos = Point2(45,260)
             self.goalPos = Point2(655,250)
         if(i == 1):
-            self.heroPos = Point2(655,260)
-            self.goalPos = Point2(45,250)
+            #self.heroPos = Point2(655,260)
+            #self.goalPos = Point2(45,250)
+            self.heroPos = Point2(45,260)
+            self.goalPos = Point2(655,250)
         if(i == 2):
             self.heroPos = Point2(45,60)
             self.goalPos = Point2(655,60)
