@@ -84,7 +84,9 @@ class Main(object):
         self.mazeIterator = 0
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
+        self.offset = 0.0
         
+        self.display = False
         self.counter = 0
         
         self.successArray = []
@@ -145,7 +147,7 @@ class Main(object):
         self.objects_eaten = defaultdict(lambda: 0)
     
     def makeMaze(self):
-        self.maze = self.mazeObject.getMaze(self.mazeIterator)
+        self.maze = self.mazeObject.getMaze(float(self.mazeIterator))
         self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
         self.hero.position = self.mazeObject.getHeroPos()
         self.mazeIterator += 1
@@ -268,6 +270,7 @@ class Main(object):
     def nextMaze(self):
         """see if the agent has met the criteria for advancement, advance if it has"""
         if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
+            self.offset = 0.0
             self.saveData()
             self.timeoutArray = []
             self.runs = 0
@@ -287,6 +290,12 @@ class Main(object):
                     number = len(self.smaze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
+        else:
+            self.offset += 0.1
+            self.mazeObject.setPositions((self.mazeIterator - 1.0) + self.offset)
+            self.hero.position = self.mazeObject.getHeroPos()
+            if self.offset == 0.2:
+                self.offset == 0.0
 
     def interSquare(self,hPos,oPos):
         """Returns wether or not circle intersect rectangle"""
