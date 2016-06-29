@@ -1,6 +1,6 @@
 import math
 import time
-
+import Image
 from IPython.display import clear_output, display, HTML
 from itertools import count
 from os.path import join, exists
@@ -68,6 +68,7 @@ def simulate(simulation,
     last_action      = None
 
     simulation_started_time = time.time()
+    count = 0
     
     frame_no = 0
     running = True
@@ -102,19 +103,21 @@ def simulate(simulation,
             last_observation = new_observation
             
             
-                 
         # adding 1 to make it less likely to happen at the same time as
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
+            #print fps_estimate
             clear_output(wait=True)
             svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
-            display(svg_html)
+            #display(svg_html)
+            #svg_html._repr_html_().show()
             if save_path is not None:
-                img_path = join(save_path, "%d.svg" % (last_image,))
+                img_path = join(save_path, "screen.svg")
                 with open(img_path, "w") as f:
-                    svg_html.write_svg(f)
-                last_image += 1
+                    svg_html.write_svg(f,img_path)
+                    print "poopy"
+                #last_image += 1
         
        
         
