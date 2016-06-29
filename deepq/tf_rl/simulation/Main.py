@@ -434,7 +434,7 @@ class Main(object):
         observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
         observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
         
-        print(observation)
+        #print(observation)
         return observation
    
     

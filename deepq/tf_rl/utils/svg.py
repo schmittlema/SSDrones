@@ -32,6 +32,7 @@ class Scene:
     def __init__(self, size=(400,400)):
         self.items = []
         self.size = size
+        self.svgname = ""
 
     def add(self,item):
         self.items.append(item)
@@ -40,18 +41,24 @@ class Scene:
         var = [
             "<?xml version=\"1.0\"?>\n",
            "<svg height=\"%d\" width=\"%d\" >\n" % (self.size[1],self.size[0]),
-           " <g style=\"fill-opacity:1.0; stroke:black;\n",
+           " <g style=\"fill-opacity:rgb(255,255,255); stroke:black;\n",
            "  stroke-width:1;\">\n"
         ]
         for item in self.items: var += item.strarray()
         var += [" </g>\n</svg>\n"]
         return var
 
-    def write_svg(self, file):
+    def write_svg(self, file,name):
+        self.svgname = name 
         file.writelines(self.strarray())
 
     def _repr_html_(self):
         return '\n'.join(self.strarray())
+
+    def display(self):
+        os.system("display -update 1.0 "+ self.svgname)
+        return        
+
 
 class Line:
     def __init__(self,start,end):
@@ -103,25 +110,3 @@ class Text:
                 (self.origin[0],self.origin[1],self.size),
                 "   %s\n" % self.text,
                 "  </text>\n"]
-
-
-
-
-def test():
-    scene = Scene()
-    scene.add(Rectangle((100,100),(200,200), **{"color":(0,255,255)} ))
-    scene.add(Line((200,200),(200,300)))
-    scene.add(Line((200,200),(300,200)))
-    scene.add(Line((200,200),(100,200)))
-    scene.add(Line((200,200),(200,100)))
-    scene.add(Circle((200,200),30, **{"color":(0,0,255)} ))
-    scene.add(Circle((200,300),30, **{"color":(0,255,0)} ))
-    scene.add(Circle((300,200),30, **{"color":(255,0,0)} ))
-    scene.add(Circle((100,200),30, **{"color":(255,255,0)} ))
-    scene.add(Circle((200,100),30, **{"color":(255,0,255)} ))
-    scene.add(Text((50,50),"Testing SVG"))
-    with open("test.svg", "w") as f:
-        scene.write_svg(f)
-
-if __name__ == '__main__':
-    test()
