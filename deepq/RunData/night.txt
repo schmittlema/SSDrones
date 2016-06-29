@@ -1,0 +1,4 @@
+Maze: 0
+Runs: 0
+SuccessRate: 0.0
+CrashRate: 0.0
