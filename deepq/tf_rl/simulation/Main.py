@@ -26,6 +26,7 @@ class GameObject(object):
         self.speed = speed 
         self.acceleration= acceleration
         self.bounciness = 1.0
+        self.maxspeed =self.settings["maximum_speed"]
 
     def wall_collisions(self):
         """Update speed upon collision with the wall."""
@@ -39,7 +40,8 @@ class GameObject(object):
 
     def move(self, dt):
         """Move as if dt seconds passed"""
-        self.speed+= dt*self.acceleration
+        if not (self.speed+dt*self.acceleration>self.maxspeed):
+            self.speed+= dt*self.acceleration
         self.position+= dt*self.speed
         self.position = Point2(*self.position)
 
@@ -284,7 +286,7 @@ class Main(object):
                     self.spawn_object(obj_type)
 
     def interSquare(self,hPos,oPos):
-        """Returns wether or not circle intersect rectangle"""
+        """Returns whether or not circle intersect rectangle"""
         rectangleLeft = oPos[0] - self.settings["object_radius"]
         rectangleRight = oPos[0] + self.settings["object_radius"]
         rectangleTop = oPos[1] - self.settings["object_radius"]
@@ -433,8 +435,7 @@ class Main(object):
         # add heading to the observation vector       
         observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
         observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
-        
-        print(observation)
+        print observation
         return observation
    
     

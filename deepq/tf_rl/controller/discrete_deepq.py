@@ -213,7 +213,7 @@ class DiscreteDeepQ(object):
             samples   = random.sample(range(len(self.experience)), self.minibatch_size)
             samples   = [self.experience[i] for i in samples]
 
-            # bach states
+            # batch states
             states         = np.empty((len(samples), self.observation_size))
             newstates      = np.empty((len(samples), self.observation_size))
             action_mask    = np.zeros((len(samples), self.num_actions))
