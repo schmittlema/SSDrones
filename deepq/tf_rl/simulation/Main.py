@@ -19,7 +19,8 @@ class GameObject(object):
     def __init__(self, position, speed, acceleration, obj_type, settings):
         """Esentially represents circles of different kinds, which have
         position and speed."""
-        self.settings = settings
+        self.settings= settings
+        self.maximum_speed = settings["maximum_speed"]
         self.radius = self.settings["object_radius"]
         self.obj_type = obj_type
         self.position = position
@@ -39,9 +40,13 @@ class GameObject(object):
 
     def move(self, dt):
         """Move as if dt seconds passed"""
-        self.speed+= dt*self.acceleration
-        self.position+= dt*self.speed
-        self.position = Point2(*self.position)
+        if not self.speed+dt*self.acceleration > self.maximum_speed:
+            self.position+= self.speed*dt+(dt**2)/2*self.acceleration #updated physics
+            self.speed+= dt*self.acceleration
+            self.position = Point2(*self.position)
+        else:      #don't allow agent to accelerate if its speed exceeds max
+            self.position+=self.speed*dt
+            self.position=Point2(*self.position)
 
     def step(self, dt):
         """Move and bounce of walls."""
@@ -153,8 +158,6 @@ class Main(object):
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
-        #self.hero.speed *= 0.5
-        #self.hero.speed += self.directions[action_id] * self.settings["delta_v"]
         self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         
     def empty(self,array):
