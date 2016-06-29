@@ -1,2 +1,2 @@
-model_checkpoint_path: "burger.ckpt"
-all_model_checkpoint_paths: "burger.ckpt"
+model_checkpoint_path: "physics2.ckpt"
+all_model_checkpoint_paths: "physics2.ckpt"
