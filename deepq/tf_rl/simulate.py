@@ -116,7 +116,6 @@ def simulate(simulation,
                 img_path = join(save_path, "screen.svg")
                 with open(img_path, "w") as f:
                     svg_html.write_svg(f,img_path)
-                    print "poopy"
                 #last_image += 1
         
        

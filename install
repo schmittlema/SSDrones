@@ -17,4 +17,7 @@ sudo pip install ipython[all]
 #Install matplotlib
 sudo apt-get install python-matplotlib
 
+#Install feh for view images
+sudo apt-get install feh
+
 echo "Complete!"
