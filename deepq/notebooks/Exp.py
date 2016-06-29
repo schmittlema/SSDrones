@@ -15,6 +15,7 @@ import tempfile
 import tensorflow as tf
 import time
 
+from threading import Thread
 from tf_rl.controller import DiscreteDeepQ
 from tf_rl.simulation import Main
 from tf_rl import simulate
@@ -160,7 +161,10 @@ else:
             except(tf.errors.NotFoundError):
                 brainName = input("File does not exist try again: ")
 
-                    
+
+def input_func():
+    while True:
+        g.display = raw_input("Display? ")
     
 
 
@@ -179,6 +183,9 @@ else:
 try:
     start_time = time.time()
     with tf.device("/cpu:0"):
+        inputThread = Thread(target = input_func)
+        inputThread.daemon = True
+        inputThread.start()
         simulate(simulation=g,
                  controller=current_controller,
                  fps=FPS,

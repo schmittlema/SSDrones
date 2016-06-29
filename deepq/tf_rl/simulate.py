@@ -110,13 +110,10 @@ def simulate(simulation,
             #print fps_estimate
             clear_output(wait=True)
             svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
-            #display(svg_html)
-            #svg_html._repr_html_().show()
             if save_path is not None:
                 img_path = join(save_path, "screen.svg")
                 with open(img_path, "w") as f:
                     svg_html.write_svg(f,img_path)
-                #last_image += 1
         
        
         
