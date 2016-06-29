@@ -187,7 +187,7 @@ try:
                  wait=WAIT,
                  disable_training=False,
                  simulation_resolution=0.001,
-                 save_path="/tmp")
+                 save_path="/tmp/")
 except (KeyboardInterrupt,IndexError):
     g.saveTotals()
     print("Complete")
