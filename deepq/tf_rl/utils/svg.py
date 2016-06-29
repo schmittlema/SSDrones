@@ -51,6 +51,8 @@ class Scene:
     def write_svg(self, file,name):
         self.svgname = name 
         file.writelines(self.strarray())
+        file.close()
+        os.system("convert /tmp/screen.svg /tmp/screen.png")
 
     def _repr_html_(self):
         return '\n'.join(self.strarray())
