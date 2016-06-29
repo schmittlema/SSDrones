@@ -231,12 +231,17 @@ class Main(object):
         wtf.write("SuccessRate: " + str(self.successRate) + "\n")
         self.averageSuccessRate.append(self.successRate)
         wtf.write("CrashRate: " + str(self.crashRate) + "\n")
-        time = sum(self.timeoutArray,0.0)/float(len(self.timeoutArray))
+        try:
+            time = sum(self.timeoutArray,0.0)/float(len(self.timeoutArray))
+        except ZeroDivisionError:
+            time = 0
         self.averageTimeout.append(time)
         wtf.write("AverageTimout: " + str(time) + "\n"+"\n")
         wtf.close()
 
     def saveTotals(self):
+        if(self.mazeIterator == 1):
+            self.saveData()
         dir = "../RunData/"
         name =dir + self.brainName + ".txt"
         wtf = open(name,"a")
