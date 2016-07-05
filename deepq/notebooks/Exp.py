@@ -3,6 +3,8 @@ from __future__ import print_function
 
 # In[1]:
 
+import tensorflow as tf
+
 get_ipython().magic(u'load_ext autoreload')
 get_ipython().magic(u'autoreload 2')
 get_ipython().magic(u'matplotlib auto')
@@ -12,7 +14,7 @@ get_ipython().magic(u'matplotlib auto')
 
 import numpy as np
 import tempfile
-import tensorflow as tf
+#import tensorflow as tf
 import time
 
 from tf_rl.controller import DiscreteDeepQ

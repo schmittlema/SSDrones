@@ -1,6 +1,6 @@
 import math
 import time
-import Image
+#import Image
 from IPython.display import clear_output, display, HTML
 from itertools import count
 from os.path import join, exists
