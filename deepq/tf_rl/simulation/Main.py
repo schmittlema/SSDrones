@@ -81,7 +81,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 0
+        self.mazeIterator = 0 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -290,7 +290,7 @@ class Main(object):
                     number = len(self.smaze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
-        else:
+        elif(self.mazeIterator - 1.0 < 1):
             self.offset += 0.1
             self.mazeObject.setPositions((self.mazeIterator - 1.0) + self.offset)
             self.hero.position = self.mazeObject.getHeroPos()

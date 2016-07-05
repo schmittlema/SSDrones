@@ -1,10 +1,13 @@
 import math
+import sys
 import time
 import Image
 from IPython.display import clear_output, display, HTML
 from itertools import count
 from os.path import join, exists
 from os import makedirs
+import  tf_rl.utils.getch as g 
+import threading
 
 def simulate(simulation,
              controller= None,
@@ -67,9 +70,13 @@ def simulate(simulation,
     last_observation = None
     last_action      = None
 
+
+    thread = threading.Thread(target=input,args=(simulation,))
+    thread.deamon = True
+    thread.start()
+
     simulation_started_time = time.time()
     count = 0
-    
     frame_no = 0
     running = True
     timeStart = simulation_started_time
@@ -102,7 +109,7 @@ def simulate(simulation,
             last_action = new_action
             last_observation = new_observation
             
-            
+                
         # adding 1 to make it less likely to happen at the same time as
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
@@ -112,8 +119,9 @@ def simulate(simulation,
             svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
             if save_path is not None:
                 img_path = join(save_path, "screen.svg")
-                with open(img_path, "w") as f:
-                    svg_html.write_svg(f,img_path)
+                if(simulation.display):
+                    with open(img_path, "w") as f:
+                        svg_html.write_svg(f,img_path)
         
        
         
@@ -123,3 +131,21 @@ def simulate(simulation,
             time.sleep(time_should_have_passed - time_passed)
             
         frame_no +=1
+
+def input(simulation):
+    getch = g._Getch()   
+    print("To quit press q then hold ctl + c")
+    while True:
+        c = getch.impl()
+        if c == "q":
+            sys.exit()
+        if c == "d":
+            if(simulation.display):
+                simulation.display = False
+                print("no longer displaying...")
+            else:
+                simulation.display = True
+                print("displaying...")
+
+
+

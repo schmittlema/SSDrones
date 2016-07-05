@@ -26,14 +26,14 @@ class Maze(object):
     def setPositions(self,i):
         if(i == 0.0):
             self.heroPos = Point2(45,260)
-            self.goalPos = Point2(65,250)
+            self.goalPos = Point2(655,250)
         if(i == 1.0 or i == 0.1):
             self.heroPos = Point2(655,260)
             self.goalPos = Point2(45,250)
         if(i == 2.0):
             self.heroPos = Point2(45,60)
             self.goalPos = Point2(655,60)
-        if(i == 3.0 or i == 0.2):
+        if(i == 3.0 or i == 0.2 or i == 9.1):
             self.heroPos = Point2(670,450)
             self.goalPos = Point2(35,50)
         if(i == 4.0):
@@ -48,9 +48,9 @@ class Maze(object):
         if(i == 7.0):
             self.heroPos = Point2(350,260)
             self.goalPos = Point2(45,400)
-        if(i == 8.0):
+        if(i == 8.0 or i == 9.2):
             self.heroPos = Point2(45,50)
-            self.goalPos = Point2(200,420)
+            self.goalPos = Point2(190,420)
         if(i == 9.0):
             self.heroPos = Point2(45,260)
             self.goalPos = Point2(655,400)
