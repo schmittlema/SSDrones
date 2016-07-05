@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import time
-import Mazes
+from tf_rl.simulation import Mazes
 import os
 
 from collections import defaultdict
@@ -116,8 +116,8 @@ class Main(object):
         #plot run reward
         self.runReward = []
         fileName = brainName + ".pdf"
-        print fileName
-        print brainName + ".txt"
+        print(fileName)
+        print(brainName + ".txt")
         self.pp = PdfPages("../RunData/" + fileName)
         
         #Timing
@@ -337,7 +337,7 @@ class Main(object):
             to_remove.append(obj)
             self.updateSuccess(obj)
             self.runs += 1
-            print "timout"
+            print("timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
                 if(self.interSquare(self.hero.position,obj.position)):
