@@ -40,13 +40,19 @@ class GameObject(object):
 
     def move(self, dt):
         """Move as if dt seconds passed"""
-        if not self.speed+dt*self.acceleration > self.maximum_speed:
-            self.position+= self.speed*dt+(dt**2)/2*self.acceleration #updated physics
-            self.speed+= dt*self.acceleration
+        if self.settings["add_physics"]: 
+            if not self.speed+dt*self.acceleration > self.maximum_speed:
+                self.position+= self.speed*dt+(dt**2)/2*self.acceleration #updated physics
+                self.speed+= dt*self.acceleration
+                self.position = Point2(*self.position)
+            else:      #don't allow agent to accelerate if its speed exceeds max
+                self.position+=self.speed*dt
+                self.position=Point2(*self.position)
+        else:
+            """Move as if dt seconds passed"""
+            self.position += dt * self.speed
             self.position = Point2(*self.position)
-        else:      #don't allow agent to accelerate if its speed exceeds max
-            self.position+=self.speed*dt
-            self.position=Point2(*self.position)
+                
 
     def step(self, dt):
         """Move and bounce of walls."""
@@ -160,8 +166,11 @@ class Main(object):
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
-        self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
-        
+        if self.settings["add_physics"]: 
+            self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
+        else:
+            self.hero.speed *= 0.5
+            self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
     def empty(self,array):
         return len(array) == 0
     

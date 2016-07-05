@@ -52,6 +52,7 @@ current_settings = {
         'square': 0
     },
     'hero_bounces_off_walls': False,
+    'add_physics': False,
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
