@@ -36,3 +36,4 @@ class _GetchWindows:
 
 
 getch = _Getch()
+
