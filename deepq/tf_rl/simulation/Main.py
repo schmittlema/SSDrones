@@ -40,6 +40,7 @@ class GameObject(object):
 
     def move(self, dt):
         """Move as if dt seconds passed"""
+        #implement new physics
         if self.settings["add_physics"]: 
             if not self.speed+dt*self.acceleration > self.maximum_speed:
                 self.position+= self.speed*dt+(dt**2)/2*self.acceleration #updated physics
@@ -48,6 +49,7 @@ class GameObject(object):
             else:      #don't allow agent to accelerate if its speed exceeds max
                 self.position+=self.speed*dt
                 self.position=Point2(*self.position)
+        #revert to the physics of the original experiment  
         else:
             """Move as if dt seconds passed"""
             self.position += dt * self.speed
@@ -413,6 +415,7 @@ class Main(object):
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
         """
+        #use modified observation method  / vector  
         if self.settings["mod_observation"]:
             num_obj_types = len(self.settings["objects"])
             observable_distance = self.settings["observation_line_length"]
@@ -465,6 +468,7 @@ class Main(object):
             observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
             return observation
 
+        #use original observation vector 
         else:
             num_obj_types = len(self.settings["objects"]) + 1 # and wall
             max_speed_x, max_speed_y = self.settings["maximum_speed"]
