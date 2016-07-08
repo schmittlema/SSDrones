@@ -166,7 +166,6 @@ class DiscreteDeepQ(object):
 
         # summaries
         tf.scalar_summary("prediction_error", self.prediction_error)
-
         self.summarize = tf.merge_all_summaries()
         self.no_op1    = tf.no_op()
 
@@ -266,7 +265,3 @@ class DiscreteDeepQ(object):
         name = "../saved_brains/" + self.bN + ".ckpt"
         self.saver.save(self.s, name)
 
-        
-        
-        
-        

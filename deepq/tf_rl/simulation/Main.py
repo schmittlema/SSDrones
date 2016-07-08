@@ -125,6 +125,7 @@ class Main(object):
         print(fileName)
         print(brainName + ".txt")
         self.pp = PdfPages("../RunData/" + fileName)
+        self.currReward = 0
         
         #Timing
         self.learntime = 0
@@ -486,6 +487,7 @@ class Main(object):
         self.runReward.append(total_reward)
         self.collected_rewards.append(total_reward)
         self.object_reward = 0
+        self.currReward = total_reward
         return total_reward
 
     def plot_reward(self, smoothing = 30):

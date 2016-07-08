@@ -8,6 +8,7 @@ from os.path import join, exists
 from os import makedirs
 import  tf_rl.utils.getch as g 
 import threading
+import tensorflow as tf
 
 def simulate(simulation,
              controller= None,
@@ -104,6 +105,7 @@ def simulate(simulation,
             #print elapsed_time
             simulation.learntime += elapsed_time
             start = 0
+
             
             # update current state as last state.
             last_action = new_action
@@ -114,7 +116,11 @@ def simulate(simulation,
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
-            #print fps_estimate
+            sumfps = tf.scalar_summary("fps",fps_estimate)
+            preward = tf.scalar_summary("Reward",simulation.currReward)
+            controller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
+            controller.summary_writer.add_summary(controller.s.run(sumfps),controller.iteration)
+
             clear_output(wait=True)
             svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
             if save_path is not None:
@@ -125,6 +131,7 @@ def simulate(simulation,
         
        
         
+
         time_should_have_passed = frame_no / fps
         time_passed = (time.time() - simulation_started_time)
         if wait and (time_should_have_passed > time_passed):
