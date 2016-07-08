@@ -14,9 +14,7 @@ get_ipython().magic(u'matplotlib auto')
 
 import numpy as np
 import tempfile
-#import tensorflow as tf
 import time
-
 from threading import Thread
 from tf_rl.controller import DiscreteDeepQ
 from tf_rl.simulation import Main
