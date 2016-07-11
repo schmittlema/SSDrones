@@ -445,7 +445,7 @@ class Main(object):
                     speed_x, speed_y = tuple(observed_object.speed)
                     if(observed_object.obj_type != "square"):
                         intersection_segment = obj.as_circle().intersect(observation_line)
-                        assert intersection_segment is not None
+                        #assert intersection_segment is not None
                         try:
                             proximity = min(intersection_segment.p1.distance(self.hero.position),
                                         intersection_segment.p2.distance(self.hero.position))
