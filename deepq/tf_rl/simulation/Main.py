@@ -285,7 +285,7 @@ class Main(object):
  
         wtf.close()    
 
-    def nextMaze(self):
+    def nextMaze(self, obj):
         """see if the agent has met the criteria for advancement, advance if it has"""
         if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
             self.offset = 0.0
@@ -308,7 +308,7 @@ class Main(object):
                     number = len(self.smaze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
-        elif(self.mazeIterator - 1.0 < 1):
+        elif((self.mazeIterator - 1.0 < 1 or self.mazeIterator-1.0 > 8.0) and  obj.obj_type == "friend"):
             self.offset += 0.1
             self.mazeObject.setPositions((self.mazeIterator - 1.0) + self.offset)
             self.hero.position = self.mazeObject.getHeroPos()
@@ -373,7 +373,7 @@ class Main(object):
             self.hero.speed = Vector2(*self.settings["hero_initial_speed"])
             self.hero.acceleration = Vector2(*self.settings["hero_initial_accel"])
             self.counter = 0
-            self.nextMaze()
+            self.nextMaze(obj)
 
             
 
