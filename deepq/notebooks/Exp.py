@@ -70,7 +70,7 @@ current_settings = {
     "speed":0,
     "accel":5,
     "minimum_success_rate": 1.0,
-    "Timeout": 3.0
+    "Timeout":0.5 
 }
 
 
