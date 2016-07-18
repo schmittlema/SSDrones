@@ -50,7 +50,7 @@ current_settings = {
     },
     'hero_bounces_off_walls': False,
     'add_physics': False,
-    'mod_observation': False,
+    'mod_observation': True,
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
@@ -70,7 +70,7 @@ current_settings = {
     "speed":0,
     "accel":5,
     "minimum_success_rate": 1.0,
-    "Timeout":0.5 
+    "Timeout":3 
 }
 
 
