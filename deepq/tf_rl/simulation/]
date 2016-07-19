@@ -52,13 +52,13 @@ class GameObject(object):
         #revert to the physics of the original experiment  
         else:
             """Move as if dt seconds passed"""
-            self.position +=(self.speed*dt)
+            self.position += dt * self.speed
             self.position = Point2(*self.position)
                 
 
     def step(self, dt):
         """Move and bounce of walls."""
-        #self.wall_collisions()
+        self.wall_collisions()
         self.move(dt)
 
     def as_square(self):
@@ -94,7 +94,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 0 
+        self.mazeIterator = 10 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -287,14 +287,33 @@ class Main(object):
 
     def nextMaze(self, obj):
         """see if the agent has met the criteria for advancement, advance if it has"""
-        if obj.obj_type == "friend":
-            self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
-            self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
+        if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
+            self.offset = 0.0
+            self.saveData()
+            self.timeoutArray = []
+            self.runs = 0
+            self.objects_eaten["friend"] = 0
+            self.objects_eaten["enemy"] = 0
+            self.successRate = 0.0
+            self.successArray = []
+            self.makeMaze()
+            self.mazeindex = 0
+            self.plot_run_reward(smoothing=100)
+            self.runReward = []
+            self.objects = []
+            for obj_type, number in self.settings["num_objects"].items():
+                if(obj_type == "enemy"):
+                    number = len(self.maze)
+                if(obj_type == "square"):
+                    number = len(self.smaze)
+                for _ in range(number):
+                    self.spawn_object(obj_type)
+        elif((self.mazeIterator - 1.0 < 1 or self.mazeIterator-1.0 > 8.0) and  obj.obj_type == "friend"):
+            self.offset += 0.1
+            self.mazeObject.setPositions((self.mazeIterator - 1.0) + self.offset)
             self.hero.position = self.mazeObject.getHeroPos()
-            obj.position = self.mazeObject.getGoalPos()
-            for obj in self.objects:
-                if(obj.obj_type == "hero"):
-                    obj.position = self.hero.position
+            if self.offset == 0.2:
+                self.offset == 0.0
 
     def interSquare(self,hPos,oPos):
         """Returns wether or not circle intersect rectangle"""
@@ -347,9 +366,6 @@ class Main(object):
         for obj in to_remove:
             if(obj.obj_type == "square"):
                 self.objects_eaten["enemy"] += 1
-            if(obj.obj_type == "friend"):
-            #    self.objects.remove(obj)
-                self.objects_eaten[obj.obj_type] += 1
             else:
                 self.objects_eaten[obj.obj_type] += 1
             self.object_reward += self.settings["object_reward"][obj.obj_type]
@@ -396,7 +412,6 @@ class Main(object):
         return False
 
     def observe(self):
-        print self.successRate 
         """Return observation vector. For all the observation directions it returns representation
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
@@ -509,14 +524,13 @@ class Main(object):
         #wall_reward =  self.settings["wall_distance_penalty"] * \
         #               np.exp(-self.distance_to_walls() / self.settings["tolerable_distance_to_wall"])
         #assert wall_reward < 1e-3, "You are rewarding hero for being close to the wall!"
-        togoal = 1000 +self.distance_to_goal()
+        togoal = self.distance_to_goal()/1000
         total_reward = self.object_reward + togoal
         self.runReward.append(total_reward)
         self.collected_rewards.append(total_reward)
         self.object_reward = 0
-        reward = total_reward - self.currReward
         self.currReward = total_reward
-        return reward
+        return total_reward
 
     def plot_reward(self, smoothing = 30):
         """Plot evolution of reward over time."""
