@@ -333,6 +333,7 @@ class Main(object):
             to_remove.append(obj)
             self.updateSuccess(obj)
             self.runs += 1
+            self.object_reward += self.settings["object_reward"]["enemy"]
             print("timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
@@ -403,13 +404,58 @@ class Main(object):
         """
         #use modified observation method  / vector  
         if self.settings["mod_observation"]:
-            observation = np.ones(2)
-           # add heading to the observation vector       
-            observation[0] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
-            observation[1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+            num_obj_types = len(self.settings["objects"])
+            observable_distance = self.settings["observation_line_length"]
+
+            relevant_objects = [obj for obj in self.objects
+                                if obj.position.distance(self.hero.position) < observable_distance and obj.obj_type !="friend"]
+            # objects sorted from closest to furthest
+            relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
+
+            observation = np.ones(self.observation_size)
+            #observation_offset = 0
+            for i, observation_line in enumerate(self.observation_lines):
+                # shift to hero position
+                observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
+                                                self.hero.position + Vector2(*observation_line.p2))
+                observed_object = None
+                
+                for obj in relevant_objects:
+                    if observation_line.distance(obj.position) < self.settings["object_radius"]:
+                        observed_object = obj
+                        break
+                object_type_id = None
+                proximity = observable_distance
+                if observed_object is not None: # object seen
+                    object_type_id = self.settings["objects"].index(observed_object.obj_type)
+                    speed_x, speed_y = tuple(observed_object.speed)
+                    if(observed_object.obj_type != "square"):
+                        intersection_segment = obj.as_circle().intersect(observation_line)
+                        #assert intersection_segment is not None
+                        try:
+                            proximity = min(intersection_segment.p1.distance(self.hero.position),
+                                        intersection_segment.p2.distance(self.hero.position))
+                        except AttributeError:
+                            proximity = observable_distance
+                    else:
+                        try:
+                            proximity = self.squareDistance(observed_object,observation_line)
+                        except(ZeroDivisionError):
+                            proximity = 0
+                
+
+                observation[i] = proximity / observable_distance
+            
+            #add hero velocity to the  observation vector
+            observation[self.observation_size-4]     = self.hero.speed[0] 
+            observation[self.observation_size-3] = self.hero.speed[1]
+            
+            # add heading to the observation vector       
+            observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
+            observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
             return observation
 
-        #use original observation vector 
+            #use original observation vector 
         else:
             num_obj_types = len(self.settings["objects"]) + 1 # and wall
             max_speed_x, max_speed_y = self.settings["maximum_speed"]
@@ -501,25 +547,25 @@ class Main(object):
     
     
     def distance_to_goal(self):
-        return -self.hero.position.distance(self.mazeObject.getGoalPos())
+        return self.hero.position.distance(self.mazeObject.getGoalPos())
     
                                            
     def collect_reward(self):
-        """Return accumulated object eating score + current distance to walls score"""
-        #wall_reward =  self.settings["wall_distance_penalty"] * \
-        #               np.exp(-self.distance_to_walls() / self.settings["tolerable_distance_to_wall"])
-        #assert wall_reward < 1e-3, "You are rewarding hero for being close to the wall!"
-        togoal = 1000 +self.distance_to_goal()
+        """Return accumulated object eating score + current distance to goal score"""
+        togoal = 1000 -self.distance_to_goal()
         total_reward = self.object_reward + togoal
         self.runReward.append(total_reward)
-        self.collected_rewards.append(total_reward)
         self.object_reward = 0
-        reward = total_reward - self.currReward
-        self.currReward = total_reward
+        reward = int((total_reward - self.currReward))
+        if self.object_reward != 0:
+            self.currReward = 0
+        else:
+            self.currReward = total_reward
+        self.collected_rewards.append(reward)
         return reward
 
-    def plot_reward(self, smoothing = 30):
         """Plot evolution of reward over time."""
+    def plot_reward(self, smoothing = 30):
         plottable = self.collected_rewards[:]
         while len(plottable) > 1000:
             for i in range(0, len(plottable) - 1, 2):

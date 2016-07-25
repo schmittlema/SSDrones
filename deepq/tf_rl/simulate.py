@@ -10,6 +10,7 @@ import  tf_rl.utils.getch as g
 import threading
 import tensorflow as tf
 
+getch = g._Getch()   
 def simulate(simulation,
              controller= None,
              fps=60,
@@ -51,6 +52,9 @@ def simulate(simulation,
         supported for the moment)
     """
 
+    fps_estimate = 0
+    tf.scalar_summary("fps",fps_estimate)
+    preward = tf.scalar_summary("Reward",simulation.currReward)
     # prepare path to save simulation images
     if save_path is not None:
         if not exists(save_path):
@@ -88,6 +92,7 @@ def simulate(simulation,
         if frame_no % action_every == 0:
             new_observation = simulation.observe()
             reward          = simulation.collect_reward()
+            #print ("reward: ", reward)
             # store last transition
             if last_observation is not None:
                 controller.store(last_observation, last_action, reward, new_observation)
@@ -110,22 +115,23 @@ def simulate(simulation,
             # update current state as last state.
             last_action = new_action
             last_observation = new_observation
+            #print last_observation
             
                 
         # adding 1 to make it less likely to happen at the same time as
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
-            sumfps = tf.scalar_summary("fps",fps_estimate)
-            preward = tf.scalar_summary("Reward",simulation.currReward)
-            controller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
-            controller.summary_writer.add_summary(controller.s.run(sumfps),controller.iteration)
+            print fps_estimate
+            #controller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
+            #controller.summary_writer.add_summary(controller.s.run(tf.merge_all_summaries(),feed_dict= feed_dict(False)),controller.iteration)
 
             clear_output(wait=True)
-            svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
-            if save_path is not None:
-                img_path = join(save_path, "screen.svg")
-                if(simulation.display):
+            
+            if(simulation.display):
+                svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
+                if save_path is not None:
+                    img_path = join(save_path, "screen.svg")
                     with open(img_path, "w") as f:
                         svg_html.write_svg(f,img_path)
         
@@ -140,7 +146,7 @@ def simulate(simulation,
         frame_no +=1
 
 def input(simulation):
-    getch = g._Getch()   
+    global getch
     print("To quit press q then hold ctl + c")
     while True:
         c = getch.impl()
