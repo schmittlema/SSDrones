@@ -94,7 +94,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 0 
+        self.mazeIterator = 3 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -129,8 +129,12 @@ class Main(object):
         self.pp = PdfPages("../RunData/" + fileName)
         self.currReward = 0
         
+        self.curr_q = 0
+        self.visited = []
         #Timing
         self.learntime = 0
+        
+        self.timeSinceCollision = time.time()
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -203,7 +207,7 @@ class Main(object):
         max_speed = np.array(self.settings["maximum_speed"])
         speed = Vector2(0, 0)
         acceleration = Vector2(0,0)
-        if(not empty):
+        if(not empty and obj_type != "friend"):
             self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
 
     def step(self, dt,fps,actionEvery):
@@ -287,14 +291,8 @@ class Main(object):
 
     def nextMaze(self, obj):
         """see if the agent has met the criteria for advancement, advance if it has"""
-        if obj.obj_type == "friend":
-            self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
-            self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
-            self.hero.position = self.mazeObject.getHeroPos()
-            obj.position = self.mazeObject.getGoalPos()
-            for obj in self.objects:
-                if(obj.obj_type == "hero"):
-                    obj.position = self.hero.position
+        self.timeSinceCollision = time.time()
+        self.visited = []  
 
     def interSquare(self,hPos,oPos):
         """Returns wether or not circle intersect rectangle"""
@@ -328,13 +326,6 @@ class Main(object):
         collision_distance = 2 * self.settings["object_radius"]
         collision_distance2 = collision_distance ** 2
         to_remove = []
-        if(self.counter >= (fps*2) * 60 * self.settings["Timeout"]):
-            obj = GameObject(Point2(200,200), 0.0, 0.0,  "enemy", self.settings)
-            to_remove.append(obj)
-            self.updateSuccess(obj)
-            self.runs += 1
-            self.object_reward += self.settings["object_reward"]["enemy"]
-            print("timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
                 if(self.interSquare(self.hero.position,obj.position)):
@@ -397,7 +388,7 @@ class Main(object):
         return False
 
     def observe(self):
-        print self.successRate 
+        #print self.successRate 
         """Return observation vector. For all the observation directions it returns representation
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
@@ -451,8 +442,8 @@ class Main(object):
             observation[self.observation_size-3] = self.hero.speed[1]
             
             # add heading to the observation vector       
-            observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
-            observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+    #        observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
+    #        observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
             return observation
 
             #use original observation vector 
@@ -549,20 +540,26 @@ class Main(object):
     def distance_to_goal(self):
         return self.hero.position.distance(self.mazeObject.getGoalPos())
     
+    def quadrant(self):
+        old_q = self.curr_q
+        self.curr_q = (int(self.hero.position[0] / 75))*100 + int(self.hero.position[1] / 35)
+        print self.curr_q
+        if(old_q == self.curr_q):
+            return -2
+        for x in self.visited:
+            if x == self.curr_q:
+                return 1
+        self.visited.append(self.curr_q)
+        return 2
                                            
     def collect_reward(self):
         """Return accumulated object eating score + current distance to goal score"""
-        togoal = 1000 -self.distance_to_goal()
-        total_reward = self.object_reward + togoal
+        exReward = self.quadrant()
+        total_reward = self.object_reward + exReward
         self.runReward.append(total_reward)
         self.object_reward = 0
-        reward = int((total_reward - self.currReward))
-        if self.object_reward != 0:
-            self.currReward = 0
-        else:
-            self.currReward = total_reward
-        self.collected_rewards.append(reward)
-        return reward
+        self.collected_rewards.append(total_reward)
+        return total_reward
 
         """Plot evolution of reward over time."""
     def plot_reward(self, smoothing = 30):

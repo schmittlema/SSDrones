@@ -111,7 +111,7 @@ def simulate(simulation,
             simulation.learntime += elapsed_time
             start = 0
 
-            
+            print time.time() - simulation.timeSinceCollision            
             # update current state as last state.
             last_action = new_action
             last_observation = new_observation
