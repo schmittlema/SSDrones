@@ -104,6 +104,19 @@ while(notString):
         notString = False
     except (NameError,SyntaxError):
         print("Please enter as a string")
+notString = True
+gpu = False
+while(notString):
+    try:
+        g = input("GPU ? ")
+        if(g == "y" or g == "Y"):
+            gpu = True
+            print("Running on GPU")
+        else:
+            gpu = False
+        notString = False
+    except (NameError,SyntaxError):
+        print("Please enter as a string")
 
 
 # In[6]:
@@ -121,7 +134,11 @@ if human_control:
 else:
     # Tensorflow business - it is always good to reset a graph before creating a new controller.
     tf.python.framework.ops.reset_default_graph()
-    session = tf.InteractiveSession()
+    if gpu:
+        config = tf.ConfigProto(allow_soft_placement=True)
+    else:
+        config = tf.ConfigProto()
+    session = tf.InteractiveSession(config = config)
 
     # This little guy will let us run tensorboard
     #      tensorboard --logdir [LOG_DIR]
@@ -178,8 +195,8 @@ else:
     
 try:
     start_time = time.time()
-    with tf.device("/cpu:0"):
-        simulate(simulation=g,
+    if(gpu):
+        session.run(simulate(simulation=g,
              controller=current_controller,
                  fps=FPS,
                  visualize_every=VISUALIZE_EVERY,
@@ -187,7 +204,18 @@ try:
                  wait=WAIT,
                  disable_training=False,
                  simulation_resolution=0.001,
-                 save_path="/tmp/")
+                 save_path="/tmp/"))
+    else:
+        with tf.device("/cpu:0"):
+            simulate(simulation=g,
+                 controller=current_controller,
+                     fps=FPS,
+                     visualize_every=VISUALIZE_EVERY,
+                     action_every=ACTION_EVERY,
+                     wait=WAIT,
+                     disable_training=False,
+                     simulation_resolution=0.001,
+                     save_path="/tmp/")
 
 except (KeyboardInterrupt,IndexError):
     g.saveTotals()
