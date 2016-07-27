@@ -122,7 +122,7 @@ def simulate(simulation,
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
-            print fps_estimate
+            #print fps_estimate
             #controller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
             #controller.summary_writer.add_summary(controller.s.run(tf.merge_all_summaries(),feed_dict= feed_dict(False)),controller.iteration)
 

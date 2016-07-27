@@ -38,11 +38,31 @@ class GameObject(object):
             elif self.position[dim] + self.radius + 1 >= world_size[dim] and self.speed[dim] > 0:
                 self.speed[dim] = - self.speed[dim] * self.bounciness
 
+    def capSpeed(self,speed):
+        if(speed[0] > self.maximum_speed[0] or speed[0] < -self.maximum_speed[0]):
+            n = 1
+            if speed[0] < 0:
+                n = -1
+            speed[0] =  n * self.maximum_speed[0]
+        if(speed[1] > self.maximum_speed[1] or speed[1] < -self.maximum_speed[1]):
+            n = 1
+            if speed[1] < 0:
+                n = -1
+            speed[1] = n * self.maximum_speed[1]
+        return speed
+
+    def speeding(self,speed):
+        if(speed[0] > self.maximum_speed[0] or speed[0] < -self.maximum_speed[0]):
+            return True
+        if(speed[1] > self.maximum_speed[1] or speed[1] < -self.maximum_speed[1]):
+            return True
+        return False
+
     def move(self, dt):
         """Move as if dt seconds passed"""
         #implement new physics
         if self.settings["add_physics"]: 
-            if not self.speed+dt*self.acceleration > self.maximum_speed:
+            if not self.speeding(self.speed+dt*self.acceleration):
                 self.position+= self.speed*dt+(dt**2)/2*self.acceleration #updated physics
                 self.speed+= dt*self.acceleration
                 self.position = Point2(*self.position)
@@ -52,6 +72,7 @@ class GameObject(object):
         #revert to the physics of the original experiment  
         else:
             """Move as if dt seconds passed"""
+            self.speed = self.capSpeed(self.speed)
             self.position +=(self.speed*dt)
             self.position = Point2(*self.position)
                 
@@ -175,8 +196,9 @@ class Main(object):
         if self.settings["add_physics"]: 
             self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         else:
-            self.hero.speed *= 0.5
+            #self.hero.speed *= 0.5
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
+
     def empty(self,array):
         return len(array) == 0
     
@@ -635,7 +657,7 @@ class Main(object):
         scene = svg.Scene((self.size[0] + 20, self.size[1] + 20 + 20 * len(stats)))
         scene.add(svg.Rectangle((10, 10), self.size))
 
-
+        
         for line in self.observation_lines:
             scene.add(svg.Line(line.p1 + self.hero.position + Point2(10,10),
                                line.p2 + self.hero.position + Point2(10,10)))
