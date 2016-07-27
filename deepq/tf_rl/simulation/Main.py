@@ -545,12 +545,12 @@ class Main(object):
         self.curr_q = (int(self.hero.position[0] / 75))*100 + int(self.hero.position[1] / 35)
         print self.curr_q
         if(old_q == self.curr_q):
-            return -2
+            return -5
         for x in self.visited:
             if x == self.curr_q:
-                return 1
+                return 0
         self.visited.append(self.curr_q)
-        return 2
+        return 5
                                            
     def collect_reward(self):
         """Return accumulated object eating score + current distance to goal score"""
@@ -631,6 +631,11 @@ class Main(object):
 
         scene = svg.Scene((self.size[0] + 20, self.size[1] + 20 + 20 * len(stats)))
         scene.add(svg.Rectangle((10, 10), self.size))
+
+        for box in self.visited:
+            x = (box/100)*75
+            y = (box%100)*35
+            scene.add(svg.Rectangle((x,y),(75,35),color = "green"))
 
 
         for line in self.observation_lines:
