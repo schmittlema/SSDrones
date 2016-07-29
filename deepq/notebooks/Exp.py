@@ -68,7 +68,7 @@ current_settings = {
     "wall_distance_penalty":  -0.0,
     "delta_v": 50,
     "speed":0,
-    "accel":5,
+    "accel":50,
     "minimum_success_rate": 1.0,
     "Timeout":0.5 
 }

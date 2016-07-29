@@ -52,9 +52,8 @@ class GameObject(object):
         #revert to the physics of the original experiment  
         else:
             """Move as if dt seconds passed"""
-            self.position += dt * self.speed
-            self.position = Point2(*self.position)
-                
+            self.position +=(self.speed*dt)
+            self.position = Point2(*self.position) 
 
     def step(self, dt):
         """Move and bounce of walls."""
@@ -561,21 +560,22 @@ class Main(object):
     
     
     def distance_to_goal(self):
-        return -self.hero.position.distance(self.mazeObject.getGoalPos())
+        return self.hero.position.distance(self.mazeObject.getGoalPos())
     
                                            
     def collect_reward(self):
-        """Return accumulated object eating score + current distance to walls score"""
-        #wall_reward =  self.settings["wall_distance_penalty"] * \
-        #               np.exp(-self.distance_to_walls() / self.settings["tolerable_distance_to_wall"])
-        #assert wall_reward < 1e-3, "You are rewarding hero for being close to the wall!"
-        togoal = self.distance_to_goal()/1000
+            """Return accumulated object eating score + current distance to goal score"""
+        togoal = 1000 -self.distance_to_goal()
         total_reward = self.object_reward + togoal
         self.runReward.append(total_reward)
-        self.collected_rewards.append(total_reward)
         self.object_reward = 0
-        self.currReward = total_reward
-        return total_reward
+        reward = int((total_reward - self.currReward))
+        if self.object_reward != 0:
+            self.currReward = 0
+        else:
+            self.currReward = total_reward
+        self.collected_rewards.append(reward)
+        return reward
 
     def plot_reward(self, smoothing = 30):
         """Plot evolution of reward over time."""
