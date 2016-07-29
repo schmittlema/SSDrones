@@ -116,10 +116,11 @@ def simulate(simulation,
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
-            sumfps = tf.scalar_summary("fps",fps_estimate)
-            preward = tf.scalar_summary("Reward",simulation.currReward)
-            controller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
-            controller.summary_writer.add_summary(controller.s.run(sumfps),controller.iteration)
+            print(fps_estimate)
+            #sumfps = tf.scalar_summary("fps",fps_estimate)
+            #preward = tf.scalar_summary("Reward",simulation.currReward)
+            #kcontroller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
+            #controller.summary_writer.add_summary(controller.s.run(sumfps),controller.iteration)
 
             clear_output(wait=True)
             svg_html = simulation.to_html(["fps = %.1f" % (fps_estimate,)])
