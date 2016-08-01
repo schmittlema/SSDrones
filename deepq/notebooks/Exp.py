@@ -44,12 +44,12 @@ current_settings = {
         'square': 'red',
     },
     'object_reward': {
-        'friend': 100,
-        'enemy': 0,
+        'friend': 1000,
+        'enemy': -100,
         'square': 0
     },
     'hero_bounces_off_walls': False,
-    'add_physics':True,
+    'add_physics':False,
     'mod_observation': True,
     'world_size': (700,500),
     'hero_initial_position': [600, 440],

@@ -76,7 +76,8 @@ class Maze(object):
             
     def makeMaze(self,i):
         if(i == 0):
-            return self.wallsOnly()
+            #return self.wallsOnly()
+            return []
         if(i == 1):
             return self.oneObst()
         if(i == 2):

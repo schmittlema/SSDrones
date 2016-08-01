@@ -75,6 +75,7 @@ class GameObject(object):
             self.speed = self.capSpeed(self.speed)
             self.position +=(self.speed*dt)
             self.position = Point2(*self.position)
+
     def step(self, dt):
         """Move and bounce of walls."""
         self.wall_collisions()
@@ -194,7 +195,6 @@ class Main(object):
         if self.settings["add_physics"]: 
             self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         else:
-            self.hero.speed *= 0.5
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
     def empty(self,array):
         return len(array) == 0
