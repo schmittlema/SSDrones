@@ -78,7 +78,7 @@ class GameObject(object):
 
     def step(self, dt):
         """Move and bounce of walls."""
-        self.wall_collisions()
+        #self.wall_collisions()
         self.move(dt)
 
     def as_square(self):
@@ -114,7 +114,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 0 
+        self.mazeIterator = 3 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -371,6 +371,7 @@ class Main(object):
             to_remove.append(obj)
             self.updateSuccess(obj)
             self.runs += 1
+            self.object_reward += self.settings["object_reward"]["enemy"]
             print("timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
@@ -427,8 +428,6 @@ class Main(object):
         x = (maxY - y1) / m + x1
         if (x > minX and x < maxX):
             return True
-
-        return False
 
     def observe(self):
         print(self.successRate)

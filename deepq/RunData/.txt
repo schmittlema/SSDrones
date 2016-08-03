@@ -640,3 +640,27 @@ SuccessRate: 0.0
 CrashRate: 1.0
 AverageTimout: 4.84807097912
 
+Maze: 0
+Runs: 14
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 4.21044456959
+
+Overall:
+Runs: 14.0
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 4.21044456959
+
+Overall:
+Runs: 
+SuccessRate: 
+CrashRate: 0
+AverageTimeout: 
+
+Overall:
+Runs: 
+SuccessRate: 
+CrashRate: 0
+AverageTimeout: 
+
