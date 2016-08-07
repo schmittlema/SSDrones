@@ -664,3 +664,117 @@ SuccessRate:
 CrashRate: 0
 AverageTimeout: 
 
+Overall:
+Runs: 
+SuccessRate: 
+CrashRate: 0
+AverageTimeout: 
+
+Maze: 0
+Runs: 7
+SuccessRate: 0.285714285714
+CrashRate: 0.714285714286
+AverageTimout: 2.86965847015
+
+Overall:
+Runs: 7.0
+SuccessRate: 0.285714285714
+CrashRate: 0.714285714286
+AverageTimout: 2.86965847015
+
+Maze: 0
+Runs: 0
+SuccessRate: 0.0
+CrashRate: 0.0
+AverageTimout: 0
+
+Overall:
+Runs: 0.0
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 0.0
+
+Maze: 0
+Runs: 0
+SuccessRate: 0.0
+CrashRate: 0.0
+AverageTimout: 0
+
+Overall:
+Runs: 0.0
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 0.0
+
+Maze: 0
+Runs: 0
+SuccessRate: 0.0
+CrashRate: 0.0
+AverageTimout: 0
+
+Overall:
+Runs: 0.0
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 0.0
+
+Maze: 0
+Runs: 9
+SuccessRate: 0.222222222222
+CrashRate: 0.777777777778
+AverageTimout: 2.32987749577
+
+Overall:
+Runs: 9.0
+SuccessRate: 0.222222222222
+CrashRate: 0.777777777778
+AverageTimout: 2.32987749577
+
+Maze: 0
+Runs: 6
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 9.86922752857
+
+Overall:
+Runs: 6.0
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 9.86922752857
+
+Maze: 0
+Runs: 5
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 6.13412303925
+
+Overall:
+Runs: 5.0
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 6.13412303925
+
+Maze: 0
+Runs: 100
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 3.61508438587
+
+Overall:
+Runs: 100.0
+SuccessRate: 1.0
+CrashRate: 0.0
+AverageTimout: 3.61508438587
+
+Maze: 0
+Runs: 4
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 0
+
+Overall:
+Runs: 4.0
+SuccessRate: 0.0
+CrashRate: 1.0
+AverageTimout: 0.0
+

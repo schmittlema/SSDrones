@@ -44,18 +44,18 @@ current_settings = {
         'square': 'red',
     },
     'object_reward': {
-        'friend': 1000,
+        'friend': 100,
         'enemy': -100,
-        'square': 0
+        'square': -100
     },
     'hero_bounces_off_walls': False,
-    'add_physics':False,
+    'add_physics':True,
     'mod_observation': True,
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
     'hero_initial_accel': [0, 0],
-    "maximum_speed":         [50, 50],
+    "maximum_speed":         [100, 100],
     "object_radius": 10.0,
     "num_objects": {
         "friend" : 1,
