@@ -114,7 +114,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 3 
+        self.mazeIterator = 0 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -327,12 +327,11 @@ class Main(object):
                     number = len(self.smaze)
                 for _ in range(number):
                     self.spawn_object(obj_type)
-        elif((self.mazeIterator - 1.0 < 1 or self.mazeIterator-1.0 > 8.0) and  obj.obj_type == "friend"):
-            self.offset += 0.1
-            self.mazeObject.setPositions((self.mazeIterator - 1.0) + self.offset)
+        elif((self.mazeIterator - 1.0 < 1 ) and  obj.obj_type == "friend"):
+            self.mazeObject.heroPos = Point2(random.randint(20,600),random.randint(10,450))
+            self.mazeObject.goalPos = Point2(random.randint(20,600),random.randint(10,450))
+            obj.position = self.mazeObject.getGoalPos()
             self.hero.position = self.mazeObject.getHeroPos()
-            if self.offset == 0.2:
-                self.offset == 0.0
 
     def interSquare(self,hPos,oPos):
         """Returns wether or not circle intersect rectangle"""
