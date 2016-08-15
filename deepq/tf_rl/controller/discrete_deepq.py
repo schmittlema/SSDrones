@@ -176,7 +176,7 @@ class DiscreteDeepQ(object):
                 "Action is performed based on single observation."
 
         self.actions_executed_so_far += 1
-        print(self.actions_executed_so_far)
+        #print(self.actions_executed_so_far)
         exploration_p = self.linear_annealing(self.actions_executed_so_far,
                                               self.exploration_period,
                                               1.0,

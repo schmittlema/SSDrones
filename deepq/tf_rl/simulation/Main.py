@@ -114,7 +114,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 0 
+        self.mazeIterator = 9 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
