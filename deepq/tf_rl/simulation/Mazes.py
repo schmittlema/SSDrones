@@ -119,7 +119,8 @@ class Maze(object):
         if(i == 8):
             return self.sMaze2()
         if(i == 9):
-            return self.sMaze3()
+            return []
+            #return self.sMaze3()
         
         
     #Circle mazes
