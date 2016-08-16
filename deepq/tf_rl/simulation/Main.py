@@ -303,10 +303,35 @@ class Main(object):
             wtf.write("AverageTimeout: " + "\n" + "\n")
  
         wtf.close()    
+    
+    def reassign(self):
+        collision_distance = 2 * self.settings["object_radius"]
+        collision_distance2 = collision_distance ** 2
+        done = False
+        self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
+        self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
+        while(not(done)):
+            for obj in self.objects:
+                if self.squared_distance(self.mazeObject.heroPos, obj.position) < collision_distance2:
+                    done = False
+                    self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
+                if self.squared_distance(self.mazeObject.goalPos, obj.position) < collision_distance2:
+                    done = False
+                    self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
+                else:
+                    done = True
+                    
 
     def nextMaze(self, obj):
+        if obj.obj_type == "friend":
+            self.reassign()
+            self.hero.position = self.mazeObject.getHeroPos()
+            obj.position = self.mazeObject.getGoalPos()
+            for obj in self.objects:
+                if(obj.obj_type == "hero"):
+                    obj.position = self.hero.position
         """see if the agent has met the criteria for advancement, advance if it has"""
-        if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
+        '''if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
             self.offset = 0.0
             self.saveData()
             self.timeoutArray = []
@@ -332,6 +357,7 @@ class Main(object):
             self.mazeObject.goalPos = Point2(random.randint(20,600),random.randint(10,450))
             obj.position = self.mazeObject.getGoalPos()
             self.hero.position = self.mazeObject.getHeroPos()
+        '''
 
     def interSquare(self,hPos,oPos):
         """Returns wether or not circle intersect rectangle"""
