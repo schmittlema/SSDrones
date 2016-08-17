@@ -615,6 +615,8 @@ class Main(object):
         self.runReward.append(total_reward)
         self.object_reward = 0
         reward = int((total_reward - self.currReward))
+        if reward < -10:
+            print str(reward) + "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
         if self.object_reward != 0:
             self.currReward = 0
         else:
