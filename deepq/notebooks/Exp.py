@@ -45,7 +45,7 @@ current_settings = {
     },
     'object_reward': {
         'friend': 1000,
-        'enemy': -100,
+        'enemy': -1000,
         'square': -100
     },
     'hero_bounces_off_walls': False,
@@ -145,10 +145,10 @@ else:
     journalist = tf.train.SummaryWriter(LOG_DIR)
 
     # Brain maps from observation to Q values for different actions.
-    # Here it is a done using a multi layer perceptron with 2 hidden
+    # Here it is a done using a multi layer perceptron with hidden
     # layers
-    brain = MLP([g.observation_size,], [200, 200, g.num_actions], 
-                [tf.tanh, tf.tanh, tf.identity])
+    brain = MLP([g.observation_size,], [200, 200,200, g.num_actions], 
+                [tf.tanh, tf.tanh, tf.tanh,tf.identity])
     
     # The optimizer to use. Here we use RMSProp as recommended
     # by the publication

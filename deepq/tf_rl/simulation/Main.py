@@ -114,7 +114,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 9 
+        self.mazeIterator = 10 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -249,7 +249,7 @@ class Main(object):
         return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
 
     def updateSuccess(self,ob):
-        if(len(self.successArray) == 10):
+        if(len(self.successArray) == 100):
                 self.successArray = self.successArray[1:]
         if ob.obj_type == "friend":
             self.successArray.append(1)
@@ -613,7 +613,6 @@ class Main(object):
         togoal = 1000 -self.distance_to_goal()
         total_reward = self.object_reward + togoal
         self.runReward.append(total_reward)
-        self.object_reward = 0
         reward = int((total_reward - self.currReward))
         if reward < -10:
             print str(reward) + "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
@@ -621,6 +620,8 @@ class Main(object):
             self.currReward = 0
         else:
             self.currReward = total_reward
+
+        self.object_reward = 0
         self.collected_rewards.append(reward)
         return reward
 
