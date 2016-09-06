@@ -24,7 +24,7 @@ class Maze(object):
         return self.heroPos
     
     def setPositions(self,i):
-        if(i == 0.0):
+        if(i == 0.0 or i == 10.0):
             self.heroPos = Point2(45,260)
             self.goalPos = Point2(655,250)
         if(i == 1.0 or i == 0.1):
@@ -70,7 +70,7 @@ class Maze(object):
         return maze
         
     def makeMazes(self):
-        for i in range(0,10):
+        for i in range(0,11):
             self.mazes.append(self.makeMaze(i))
             self.smazes.append(self.makeSMaze(i))
             
@@ -96,6 +96,8 @@ class Maze(object):
             return self.cMaze2()
         if(i == 9):
             return self.cMaze3()
+        if(i == 10):
+            return self.wallsOnly()#self.cMaze3()[:130]
     
     
     def makeSMaze(self,i):
@@ -121,6 +123,8 @@ class Maze(object):
         if(i == 9):
             return []
             #return self.sMaze3()
+        if(i == 10):
+            return []
         
         
     #Circle mazes
