@@ -114,7 +114,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 10 
+        self.mazeIterator = 1 
         self.mazeObject = Mazes.Maze()
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -151,6 +151,8 @@ class Main(object):
         
         #Timing
         self.learntime = 0
+        self.minTime = 10000
+        self.time = 0
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -230,16 +232,15 @@ class Main(object):
 
         Also resolve collisions with the hero"""
         self.counter += 1
+        self.time = self.time + dt
         for obj in self.objects + [self.hero] :
             obj.step(dt)
         self.resolve_collisions(fps,actionEvery)
         
     def runComplete(self):
-        self.timeOut = time.time() - self.timeStart
-        if(len(self.timeoutArray) == 10):
-            self.timeoutArray = self.timeoutArray[1:]
+        self.timeOut = (self.time)/self.minTime
         self.timeoutArray.append(self.timeOut)
-        self.timeStart = time.time() 
+        self.time = 0
         
     def runFail(self):
         self.timeStart = time.time()
@@ -303,6 +304,12 @@ class Main(object):
             wtf.write("AverageTimeout: " + "\n" + "\n")
  
         wtf.close()    
+
+    def random_selector(self,a,b):
+        if a > b:
+            return random.randint(b,a)    
+        else:
+            return random.randint(a,b)
     
     def reassign(self):
         collision_distance = 2 * self.settings["object_radius"]
@@ -310,16 +317,22 @@ class Main(object):
         done = False
         self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
         self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
+        obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
         while(not(done)):
             for obj in self.objects:
-                if self.squared_distance(self.mazeObject.heroPos, obj.position) < collision_distance2:
+                if (obj.obj_type == "enemy"):
+                    obj.position = obstpos
+                if self.squared_distance(self.mazeObject.heroPos, obj.position) < collision_distance2 + 30:
                     done = False
                     self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
-                if self.squared_distance(self.mazeObject.goalPos, obj.position) < collision_distance2:
+                    obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
+                if self.squared_distance(self.mazeObject.goalPos, obj.position) < collision_distance2 + 30:
                     done = False
                     self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
+                    obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
                 else:
                     done = True
+        self.minTime =  self.mazeObject.heroPos.distance(self.mazeObject.goalPos)/(self.settings["maximum_speed"][0])
                     
 
     def nextMaze(self, obj):
@@ -391,10 +404,11 @@ class Main(object):
         collision_distance = 2 * self.settings["object_radius"]
         collision_distance2 = collision_distance ** 2
         to_remove = []
-        if(self.counter >= (fps*2) * 60 * self.settings["Timeout"]):
+        if(self.time >= self.minTime * self.settings["Timeout"]):
             obj = GameObject(Point2(200,200), 0.0, 0.0,  "enemy", self.settings)
             to_remove.append(obj)
             self.updateSuccess(obj)
+            self.time = 0
             self.runs += 1
             self.object_reward += self.settings["object_reward"]["enemy"]
             print("timeout")
@@ -456,6 +470,9 @@ class Main(object):
 
     def observe(self):
         print(self.successRate)
+        print(self.timeoutArray)
+        print("minTime " + str(self.minTime))
+        print("dt total" + str(self.time))
         """Return observation vector. For all the observation directions it returns representation
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
@@ -640,8 +657,8 @@ class Main(object):
         plt.xlabel('Frames')
         plt.ylabel('Reward')
         plt.title('Average Reward Overall')
-        plt.savefig(self.pp, format='pdf')
-        self.pp.close()
+        #plt.savefig(self.pp, format='pdf')
+        #self.pp.close()
 
    
     def plot_run_reward(self, smoothing = 30):
@@ -661,6 +678,23 @@ class Main(object):
         plt.title(str(self.mazeIterator -2))
         plt.savefig(self.pp, format='pdf')
 
+    def plot_timing(self, smoothing = 30):
+        """Plot evolution of reward over time."""
+        plottable = self.timeoutArray[:]
+        while len(plottable) > 1000:
+            for i in range(0, len(plottable) - 1, 2):
+                plottable[i//2] = (plottable[i] + plottable[i+1]) / 2
+            plottable = plottable[:(len(plottable) // 2)]
+        x = []
+        for  i in range(smoothing, len(plottable)):
+            chunk = plottable[i-smoothing:i]
+            x.append(sum(chunk) / len(chunk))
+        plt.plot(list(range(len(x))), x)
+        plt.xlabel('Frames')
+        plt.ylabel('Relative time to Min')
+        plt.title('Timing Graph')
+        plt.savefig(self.pp, format='pdf')
+        self.pp.close()
 
     def generate_observation_lines(self):
         """Generate observation segments in settings["num_observation_lines"] directions"""

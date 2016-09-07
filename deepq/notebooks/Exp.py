@@ -70,7 +70,7 @@ current_settings = {
     "speed":0,
     "accel":50,
     "minimum_success_rate": 1.0,
-    "Timeout":3 
+    "Timeout":5 
 }
 
 
@@ -147,8 +147,8 @@ else:
     # Brain maps from observation to Q values for different actions.
     # Here it is a done using a multi layer perceptron with hidden
     # layers
-    brain = MLP([g.observation_size,], [200, 200,200, g.num_actions], 
-                [tf.tanh, tf.tanh, tf.tanh,tf.identity])
+    brain = MLP([g.observation_size,], [300,300, g.num_actions], 
+                [tf.tanh, tf.tanh,tf.identity])
     
     # The optimizer to use. Here we use RMSProp as recommended
     # by the publication
@@ -218,6 +218,7 @@ try:
                      save_path="/tmp/")
 
 except (KeyboardInterrupt,IndexError):
+    g.plot_timing(smoothing=100)
     g.saveTotals()
     print("Complete")
     runTime = time.time() - start_time
@@ -226,24 +227,14 @@ except (KeyboardInterrupt,IndexError):
     print("SimulationTime: " + str(runTime - g.learntime))
 
 
-# In[ ]:
 
 session.run(current_controller.target_network_update)
 
 
-# In[ ]:
 
 current_controller.q_network.input_layer.Ws[0].eval()
 
 
-# In[ ]:
 
 current_controller.target_q_network.input_layer.Ws[0].eval()
-
-
-# # Average Reward over time
-
-# In[ ]:
-
-g.plot_reward(smoothing=100)
 
