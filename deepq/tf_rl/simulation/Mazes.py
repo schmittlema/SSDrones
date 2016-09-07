@@ -142,7 +142,7 @@ class Maze(object):
         return maze
 
     def oneObst(self):
-        maze = self.wallsOnly()
+        maze = []#self.wallsOnly()
         maze.append(Point2(350,250))
         return maze
     
