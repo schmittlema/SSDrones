@@ -1,7 +1,6 @@
 import math
 import sys
 import time
-#import Image
 from IPython.display import clear_output, display, HTML
 from itertools import count
 from os.path import join, exists
@@ -9,6 +8,8 @@ from os import makedirs
 import  tf_rl.utils.getch as g 
 import threading
 import tensorflow as tf
+
+running = True
 
 def simulate(simulation,
              controller= None,
@@ -50,7 +51,7 @@ def simulate(simulation,
         save svg visualization (only tl_rl.utils.svg
         supported for the moment)
     """
-
+    global running
     # prepare path to save simulation images
     if save_path is not None:
         if not exists(save_path):
@@ -116,7 +117,7 @@ def simulate(simulation,
         # action taking.
         if (frame_no + 1) % visualize_every == 0:
             fps_estimate = frame_no / (time.time() - simulation_started_time)
-            print(fps_estimate)
+            #print(fps_estimate)
             #sumfps = tf.scalar_summary("fps",fps_estimate)
             #preward = tf.scalar_summary("Reward",simulation.currReward)
             #kcontroller.summary_writer.add_summary(controller.s.run(preward),controller.iteration)
@@ -140,12 +141,16 @@ def simulate(simulation,
             
         frame_no +=1
 
+    raise KeyboardInterrupt
+
 def input(simulation):
     getch = g._Getch()   
+    global running
     print("To quit press q then hold ctl + c")
     while True:
         c = getch.impl()
         if c == "q":
+            running = False
             sys.exit()
         if c == "d":
             if(simulation.display):
