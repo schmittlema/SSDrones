@@ -78,7 +78,6 @@ class GameObject(object):
 
     def step(self, dt):
         """Move and bounce of walls."""
-        #self.wall_collisions()
         self.move(dt)
 
     def as_square(self):
@@ -151,8 +150,11 @@ class Main(object):
         
         #Timing
         self.learntime = 0
-        self.minTime = 10000
         self.time = 0
+        self.minTime = 0
+
+        #Rotation 
+        self.heading = 0
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -182,6 +184,7 @@ class Main(object):
         #directions of movement  
         self.directions = [Vector2(*d) for d in [[1,0], [0,1], [-1,0],[0,-1],[0.0,0.0]]]
         self.num_actions = len(self.directions)
+        self.moves = [-60,60,0,0,0]
 
         self.objects_eaten = defaultdict(lambda: 0)
     
@@ -190,14 +193,22 @@ class Main(object):
         self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
         self.hero.position = self.mazeObject.getHeroPos()
         self.mazeIterator += 1
+    
+    def convert_to_cartesian(self,heading):
+        return [math.cos(heading),math.sin(heading)]
         
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
-        if self.settings["add_physics"]: 
+        if self.settings["Rotation"]:
+            self.heading = self.heading + self.moves[action_id]
+            self.hero.speed += self.convert_to_cartesian(self.heading) * self.settings["delta_v"]
+            
+        elif self.settings["add_physics"]: 
             self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         else:
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
+
     def empty(self,array):
         return len(array) == 0
     
@@ -226,6 +237,7 @@ class Main(object):
         acceleration = Vector2(0,0)
         if(not empty):
             self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
+        self.minTime =  self.mazeObject.heroPos.distance(self.mazeObject.goalPos)/(self.settings["maximum_speed"][0])
 
     def step(self, dt,fps,actionEvery):
         """Simulate all the objects for a given ammount of time.
@@ -254,7 +266,7 @@ class Main(object):
                 self.successArray = self.successArray[1:]
         if ob.obj_type == "friend":
             self.successArray.append(1)
-            self.runComplete()
+        self.runComplete()
         if ob.obj_type == "enemy" or ob.obj_type == "square":
             self.successArray.append(0)
             self.runFail()
@@ -470,148 +482,207 @@ class Main(object):
 
     def observe(self):
         print(self.successRate)
-        print(self.timeoutArray)
-        print("minTime " + str(self.minTime))
-        print("dt total" + str(self.time))
+        #print(self.timeoutArray)
+        #print("minTime " + str(self.minTime))
+        #print("dt total" + str(self.time))
         """Return observation vector. For all the observation directions it returns representation
         of the closest object to the hero - might be nothing, another object or a wall.
         Representation of observation for all the directions will be concatenated.
         """
-        #use modified observation method  / vector  
         if self.settings["mod_observation"]:
-            num_obj_types = len(self.settings["objects"])
-            observable_distance = self.settings["observation_line_length"]
-
-            relevant_objects = [obj for obj in self.objects
-                                if obj.position.distance(self.hero.position) < observable_distance and obj.obj_type !="friend"]
-            # objects sorted from closest to furthest
-            relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
-
-            observation = np.ones(self.observation_size)
-            #observation_offset = 0
-            for i, observation_line in enumerate(self.observation_lines):
-                # shift to hero position
-                observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
-                                                self.hero.position + Vector2(*observation_line.p2))
-                observed_object = None
-                
-                for obj in relevant_objects:
-                    if observation_line.distance(obj.position) < self.settings["object_radius"]:
-                        observed_object = obj
-                        break
-                object_type_id = None
-                proximity = observable_distance
-                if observed_object is not None: # object seen
-                    object_type_id = self.settings["objects"].index(observed_object.obj_type)
-                    speed_x, speed_y = tuple(observed_object.speed)
-                    if(observed_object.obj_type != "square"):
-                        intersection_segment = obj.as_circle().intersect(observation_line)
-                        #assert intersection_segment is not None
-                        try:
-                            proximity = min(intersection_segment.p1.distance(self.hero.position),
-                                        intersection_segment.p2.distance(self.hero.position))
-                        except AttributeError:
-                            proximity = observable_distance
-                    else:
-                        try:
-                            proximity = self.squareDistance(observed_object,observation_line)
-                        except(ZeroDivisionError):
-                            proximity = 0
-                
-
-                observation[i] = proximity / observable_distance
-            
-            #add hero velocity to the  observation vector
-            observation[self.observation_size-4]     = self.hero.speed[0] 
-            observation[self.observation_size-3] = self.hero.speed[1]
-            
-            # add heading to the observation vector       
-            observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
-            observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
-            return observation
-
-        #use original observation vector 
+            return self.mod_observation()
+        if self.settings["Rotation"]:
+            return self.rotation_observation()
         else:
-            num_obj_types = len(self.settings["objects"]) + 1 # and wall
-            max_speed_x, max_speed_y = self.settings["maximum_speed"]
+            return self.old_observation()
+        
 
-            observable_distance = self.settings["observation_line_length"]
+    def rotation_observation(self):
+        #use modified observation method  / vector  
+        num_obj_types = len(self.settings["objects"])
+        observable_distance = self.settings["observation_line_length"]
 
-            relevant_objects = [obj for obj in self.objects
-                                if obj.position.distance(self.hero.position) < observable_distance]
-            # objects sorted from closest to furthest
-            relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
+        relevant_objects = [obj for obj in self.objects
+                            if obj.position.distance(self.hero.position) < observable_distance and obj.obj_type !="friend"]
+        # objects sorted from closest to furthest
+        relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
 
-            observation        = np.zeros(self.observation_size)
-            observation_offset = 0
-            for i, observation_line in enumerate(self.observation_lines):
-                # shift to hero position
-                observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
-                                                self.hero.position + Vector2(*observation_line.p2))
-
-                observed_object = None
-                # if end of observation line is outside of walls, we see the wall.
-                if not self.inside_walls(observation_line.p2):
-                    observed_object = "**wall**"
-                for obj in relevant_objects:
-                    if observation_line.distance(obj.position) < self.settings["object_radius"]:
-                        observed_object = obj
-                        break
-                object_type_id = None
-                speed_x, speed_y = 0, 0
-                proximity = 0
-                if observed_object == "**wall**": # wall seen
-                    object_type_id = num_obj_types - 1
-                    # a wall has fairly low speed...
-                    speed_x, speed_y = 0, 0
-                    # best candidate is intersection between
-                    # observation_line and a wall, that's
-                    # closest to the hero
-                    best_candidate = None
-                    for wall in self.walls:
-                        candidate = observation_line.intersect(wall)
-                        if candidate is not None:
-                            if (best_candidate is None or
-                                    best_candidate.distance(self.hero.position) >
-                                    candidate.distance(self.hero.position)):
-                                best_candidate = candidate
-                    if best_candidate is None:
-                        # assume it is due to rounding errors
-                        # and wall is barely touching observation line
-                        proximity = observable_distance
-                    else:
-                        proximity = best_candidate.distance(self.hero.position)
-                elif observed_object is not None: # agent seen
-                    object_type_id = self.settings["objects"].index(observed_object.obj_type)
-                    speed_x, speed_y = tuple(observed_object.speed)
+        observation_size = 10
+        observation = np.ones(observation_size)
+        for i, observation_line in enumerate(self.observation_lines):
+            # shift to hero position
+            observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
+                                            self.hero.position + Vector2(*observation_line.p2))
+            observed_object = None
+            
+            for obj in relevant_objects:
+                if observation_line.distance(obj.position) < self.settings["object_radius"]:
+                    observed_object = obj
+                    break
+            object_type_id = None
+            proximity = observable_distance
+            if observed_object is not None: # object seen
+                object_type_id = self.settings["objects"].index(observed_object.obj_type)
+                speed_x, speed_y = tuple(observed_object.speed)
+                if(observed_object.obj_type != "square"):
                     intersection_segment = obj.as_circle().intersect(observation_line)
-                    assert intersection_segment is not None
+                    #assert intersection_segment is not None
                     try:
                         proximity = min(intersection_segment.p1.distance(self.hero.position),
-                                        intersection_segment.p2.distance(self.hero.position))
+                                    intersection_segment.p2.distance(self.hero.position))
                     except AttributeError:
                         proximity = observable_distance
-                for object_type_idx_loop in range(num_obj_types):
-                    observation[observation_offset + object_type_idx_loop] = 1.0
-                if object_type_id is not None:
-                    observation[observation_offset + object_type_id] = proximity / observable_distance
-                observation[observation_offset + num_obj_types] =     speed_x   / max_speed_x
-                observation[observation_offset + num_obj_types + 1] = speed_y   / max_speed_y
-                assert num_obj_types + 2 == self.eye_observation_size
-                observation_offset += self.eye_observation_size
-
-            observation[observation_offset]     = self.hero.speed[0] / max_speed_x
-            observation[observation_offset + 1] = self.hero.speed[1] / max_speed_y
-            observation_offset += 2
+                else:
+                    try:
+                        proximity = self.squareDistance(observed_object,observation_line)
+                    except(ZeroDivisionError):
+                        proximity = 0
             
-            # add normalized locaiton of the hero in environment        
-            observation[observation_offset]     = self.hero.position[0] / 350.0 - 1.0
-            observation[observation_offset + 1] = self.hero.position[1] / 250.0 - 1.0
-            
-            assert observation_offset + 2 == self.observation_size
 
-            return observation
-       
+            observation[i] = proximity / observable_distance
+        
+        #add hero velocity to the  observation vector
+        observation[observation_size-4]     = self.hero.speed[0] 
+        observation[observation_size-3] = self.hero.speed[1]
+        
+        # add heading to the observation vector       
+        observation[observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
+        observation[observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+        return observation
+
+    def mod_observation(self):
+        #use modified observation method  / vector  
+        num_obj_types = len(self.settings["objects"])
+        observable_distance = self.settings["observation_line_length"]
+
+        relevant_objects = [obj for obj in self.objects
+                            if obj.position.distance(self.hero.position) < observable_distance and obj.obj_type !="friend"]
+        # objects sorted from closest to furthest
+        relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
+
+        observation = np.ones(self.observation_size)
+        #observation_offset = 0
+        for i, observation_line in enumerate(self.observation_lines):
+            # shift to hero position
+            observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
+                                            self.hero.position + Vector2(*observation_line.p2))
+            observed_object = None
+            
+            for obj in relevant_objects:
+                if observation_line.distance(obj.position) < self.settings["object_radius"]:
+                    observed_object = obj
+                    break
+            object_type_id = None
+            proximity = observable_distance
+            if observed_object is not None: # object seen
+                object_type_id = self.settings["objects"].index(observed_object.obj_type)
+                speed_x, speed_y = tuple(observed_object.speed)
+                if(observed_object.obj_type != "square"):
+                    intersection_segment = obj.as_circle().intersect(observation_line)
+                    #assert intersection_segment is not None
+                    try:
+                        proximity = min(intersection_segment.p1.distance(self.hero.position),
+                                    intersection_segment.p2.distance(self.hero.position))
+                    except AttributeError:
+                        proximity = observable_distance
+                else:
+                    try:
+                        proximity = self.squareDistance(observed_object,observation_line)
+                    except(ZeroDivisionError):
+                        proximity = 0
+            
+
+            observation[i] = proximity / observable_distance
+        
+        #add hero velocity to the  observation vector
+        observation[self.observation_size-4]     = self.hero.speed[0] 
+        observation[self.observation_size-3] = self.hero.speed[1]
+        
+        # add heading to the observation vector       
+        observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
+        observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+        return observation
+
+    def old_observation(self):
+        num_obj_types = len(self.settings["objects"]) + 1 # and wall
+        max_speed_x, max_speed_y = self.settings["maximum_speed"]
+
+        observable_distance = self.settings["observation_line_length"]
+
+        relevant_objects = [obj for obj in self.objects
+                            if obj.position.distance(self.hero.position) < observable_distance]
+        # objects sorted from closest to furthest
+        relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
+
+        observation        = np.zeros(self.observation_size)
+        observation_offset = 0
+        for i, observation_line in enumerate(self.observation_lines):
+            # shift to hero position
+            observation_line = LineSegment2(self.hero.position + Vector2(*observation_line.p1),
+                                            self.hero.position + Vector2(*observation_line.p2))
+
+            observed_object = None
+            # if end of observation line is outside of walls, we see the wall.
+            if not self.inside_walls(observation_line.p2):
+                observed_object = "**wall**"
+            for obj in relevant_objects:
+                if observation_line.distance(obj.position) < self.settings["object_radius"]:
+                    observed_object = obj
+                    break
+            object_type_id = None
+            speed_x, speed_y = 0, 0
+            proximity = 0
+            if observed_object == "**wall**": # wall seen
+                object_type_id = num_obj_types - 1
+                # a wall has fairly low speed...
+                speed_x, speed_y = 0, 0
+                # best candidate is intersection between
+                # observation_line and a wall, that's
+                # closest to the hero
+                best_candidate = None
+                for wall in self.walls:
+                    candidate = observation_line.intersect(wall)
+                    if candidate is not None:
+                        if (best_candidate is None or
+                                best_candidate.distance(self.hero.position) >
+                                candidate.distance(self.hero.position)):
+                            best_candidate = candidate
+                if best_candidate is None:
+                    # assume it is due to rounding errors
+                    # and wall is barely touching observation line
+                    proximity = observable_distance
+                else:
+                    proximity = best_candidate.distance(self.hero.position)
+            elif observed_object is not None: # agent seen
+                object_type_id = self.settings["objects"].index(observed_object.obj_type)
+                speed_x, speed_y = tuple(observed_object.speed)
+                intersection_segment = obj.as_circle().intersect(observation_line)
+                assert intersection_segment is not None
+                try:
+                    proximity = min(intersection_segment.p1.distance(self.hero.position),
+                                    intersection_segment.p2.distance(self.hero.position))
+                except AttributeError:
+                    proximity = observable_distance
+            for object_type_idx_loop in range(num_obj_types):
+                observation[observation_offset + object_type_idx_loop] = 1.0
+            if object_type_id is not None:
+                observation[observation_offset + object_type_id] = proximity / observable_distance
+            observation[observation_offset + num_obj_types] =     speed_x   / max_speed_x
+            observation[observation_offset + num_obj_types + 1] = speed_y   / max_speed_y
+            assert num_obj_types + 2 == self.eye_observation_size
+            observation_offset += self.eye_observation_size
+
+        observation[observation_offset]     = self.hero.speed[0] / max_speed_x
+        observation[observation_offset + 1] = self.hero.speed[1] / max_speed_y
+        observation_offset += 2
+        
+        # add normalized locaiton of the hero in environment        
+        observation[observation_offset]     = self.hero.position[0] / 350.0 - 1.0
+        observation[observation_offset + 1] = self.hero.position[1] / 250.0 - 1.0
+        
+        assert observation_offset + 2 == self.observation_size
+
+        return observation
     
     def distance_to_walls(self):
         """Returns distance of a hero to walls"""
@@ -631,8 +702,6 @@ class Main(object):
         total_reward = self.object_reward + togoal
         self.runReward.append(total_reward)
         reward = int((total_reward - self.currReward))
-        if reward < -10:
-            print str(reward) + "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
         if self.object_reward != 0:
             self.currReward = 0
         else:
@@ -689,8 +758,9 @@ class Main(object):
         for  i in range(smoothing, len(plottable)):
             chunk = plottable[i-smoothing:i]
             x.append(sum(chunk) / len(chunk))
-        plt.plot(list(range(len(x))), x)
-        plt.xlabel('Frames')
+        plt.plot(self.timeoutArray,"ro")
+        plt.axis([0,len(self.timeoutArray),0,10])
+        plt.xlabel('Runs')
         plt.ylabel('Relative time to Min')
         plt.title('Timing Graph')
         plt.savefig(self.pp, format='pdf')
@@ -702,8 +772,15 @@ class Main(object):
         start = Point2(0.0, 0.0)
         end   = Point2(self.settings["observation_line_length"],
                        self.settings["observation_line_length"])
-        for angle in np.linspace(0, 2*np.pi, self.settings["num_observation_lines"], endpoint=False):
-            rotation = Point2(math.cos(angle), math.sin(angle))
+        num = 2*np.pi
+        lines = self.settings["num_observation_lines"]
+
+        if self.settings["Rotation"]:
+            num = np.pi
+            lines = 10
+        
+        for angle in np.linspace(0, num, lines, endpoint=False):
+            rotation = Point2(math.cos(angle+ self.heading), math.sin(angle))
             current_start = Point2(start[0] * rotation[0], start[1] * rotation[1])
             current_end   = Point2(end[0]   * rotation[0], end[1]   * rotation[1])
             result.append(LineSegment2(current_start, current_end))

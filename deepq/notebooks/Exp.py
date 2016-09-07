@@ -50,7 +50,7 @@ current_settings = {
     },
     'hero_bounces_off_walls': False,
     'add_physics':False,
-    'mod_observation': True,
+    'mod_observation': False,
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
@@ -70,7 +70,8 @@ current_settings = {
     "speed":0,
     "accel":50,
     "minimum_success_rate": 1.0,
-    "Timeout":5 
+    "Timeout":5 ,
+    "Rotation" :True 
 }
 
 
@@ -147,7 +148,10 @@ else:
     # Brain maps from observation to Q values for different actions.
     # Here it is a done using a multi layer perceptron with hidden
     # layers
-    brain = MLP([g.observation_size,], [300,300, g.num_actions], 
+    size = g.observation_size
+    if g.settings["Rotation"]:
+        size = 10
+    brain = MLP([size,], [300,300, g.num_actions], 
                 [tf.tanh, tf.tanh,tf.identity])
     
     # The optimizer to use. Here we use RMSProp as recommended
@@ -155,7 +159,7 @@ else:
     optimizer = tf.train.RMSPropOptimizer(learning_rate= 0.001, decay=0.9)
 
     # DiscreteDeepQ object
-    current_controller = DiscreteDeepQ(g.observation_size, g.num_actions, brain, optimizer, session,brainName,
+    current_controller = DiscreteDeepQ(size, g.num_actions, brain, optimizer, session,brainName,
                                        discount_rate=0.99, exploration_period=5000, max_experience=10000, 
                                        store_every_nth=4, train_every_nth=4,
                                        summary_writer=journalist)
@@ -164,7 +168,7 @@ else:
     session.run(tf.initialize_all_variables())
     session.run(current_controller.target_network_update)
     # graph was not available when journalist was created  
-    journalist.add_graph(session.graph_def)
+    journalist.add_graph(session.graph)
     
     if(saver):
         notFound = True
