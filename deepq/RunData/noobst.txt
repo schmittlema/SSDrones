@@ -1,0 +1,12 @@
+Maze: 0
+Runs: 34
+SuccessRate: 0.764705882353
+CrashRate: 0.235294117647
+AverageTimout: 2.55198166592
+
+Overall:
+Runs: 34.0
+SuccessRate: 0.764705882353
+CrashRate: 0.235294117647
+AverageTimout: 2.55198166592
+

@@ -50,7 +50,7 @@ current_settings = {
     },
     'hero_bounces_off_walls': False,
     'add_physics':False,
-    'mod_observation': False,
+    'mod_observation':False, 
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
@@ -150,7 +150,7 @@ else:
     # layers
     size = g.observation_size
     if g.settings["Rotation"]:
-        size = 10
+        size = 20 - 9
     brain = MLP([size,], [300,300, g.num_actions], 
                 [tf.tanh, tf.tanh,tf.identity])
     
@@ -168,7 +168,7 @@ else:
     session.run(tf.initialize_all_variables())
     session.run(current_controller.target_network_update)
     # graph was not available when journalist was created  
-    journalist.add_graph(session.graph)
+    journalist.add_graph(session.graph_def)
     
     if(saver):
         notFound = True
@@ -190,7 +190,7 @@ else:
 FPS          = 100
 ACTION_EVERY = 3
     
-fast_mode = True
+fast_mode = False 
 if fast_mode:
     WAIT, VISUALIZE_EVERY = False, 10
 else:
