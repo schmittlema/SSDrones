@@ -92,7 +92,7 @@ class GameObject(object):
         if(self.obj_type == "square"):
             return svg.Rectangle(self.position - Point2(10,10),Point2(2*self.radius,2*self.radius),color=color)
         else:
-            return svg.Circle(self.position + Point2(10, 10), self.radius, color=color)
+            return svg.Circle(self.position, self.radius, color=color)
 
 class Main(object):
     def __init__(self, settings,brainName):
@@ -195,15 +195,29 @@ class Main(object):
         self.mazeIterator += 1
     
     def convert_to_cartesian(self,heading):
-        return [math.cos(heading),math.sin(heading)]
-        
+        h = (heading * math.pi)/(200-20)
+        return [math.cos(h),math.sin(h)]
+
+    def mapCircle(self,heading):
+        h = heading
+        if heading < 0:
+            h = 360 + heading
+        if heading >= 360:
+            h = heading - 360
+        return h        
+
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
+        #action_id = 0
         if self.settings["Rotation"]:
-            self.heading = self.heading + self.moves[action_id]
-            self.hero.speed += self.convert_to_cartesian(self.heading) * self.settings["delta_v"]
-            
+            self.heading = self.mapCircle(self.heading + self.moves[action_id])
+            self.observation_lines = self.generate_observation_lines()
+            if action_id == 2:
+                x = self.convert_to_cartesian(self.heading)[0] * self.settings["delta_v"]
+                y = self.convert_to_cartesian(self.heading)[1] * self.settings["delta_v"]
+                self.hero.speed += [x,y]
+
         elif self.settings["add_physics"]: 
             self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
         else:
@@ -481,7 +495,9 @@ class Main(object):
             return True
 
     def observe(self):
-        print(self.successRate)
+        #print(self.successRate)
+        #print(self.heading)
+        #print(self.hero.speed)
         #print(self.timeoutArray)
         #print("minTime " + str(self.minTime))
         #print("dt total" + str(self.time))
@@ -507,7 +523,7 @@ class Main(object):
         # objects sorted from closest to furthest
         relevant_objects.sort(key=lambda x: x.position.distance(self.hero.position))
 
-        observation_size = 10
+        observation_size = 11
         observation = np.ones(observation_size)
         for i, observation_line in enumerate(self.observation_lines):
             # shift to hero position
@@ -773,14 +789,20 @@ class Main(object):
         end   = Point2(self.settings["observation_line_length"],
                        self.settings["observation_line_length"])
         num = 2*np.pi
+        nums = 0
+        h = 0
         lines = self.settings["num_observation_lines"]
+        obstlines = np.linspace(nums, num, lines, endpoint=False)
 
         if self.settings["Rotation"]:
+            nums = 0 
             num = np.pi
-            lines = 10
+            lines = 7
+            h = ((self.heading * np.pi)/180) + np.pi/2
+            obstlines = [0,np.pi/6,np.pi/3,np.pi/2,2*np.pi/3,5*np.pi/6,np.pi]
         
-        for angle in np.linspace(0, num, lines, endpoint=False):
-            rotation = Point2(math.cos(angle+ self.heading), math.sin(angle))
+        for angle in obstlines:
+            rotation = Point2(math.cos(angle+ h), math.sin(angle + h))
             current_start = Point2(start[0] * rotation[0], start[1] * rotation[1])
             current_end   = Point2(end[0]   * rotation[0], end[1]   * rotation[1])
             result.append(LineSegment2(current_start, current_end))
@@ -808,10 +830,17 @@ class Main(object):
         scene.add(svg.Rectangle((10, 10), self.size))
 
 
-        for line in self.observation_lines:
-            scene.add(svg.Line(line.p1 + self.hero.position + Point2(10,10),
-                               line.p2 + self.hero.position + Point2(10,10)))
 
+
+        for line in self.observation_lines:
+            scene.add(svg.Line(line.p1 + self.hero.position,
+                               line.p2 + self.hero.position))
+
+        if (self.settings["Rotation"]):
+            headingend = self.convert_to_cartesian(self.heading) 
+            headingend[0] = headingend[0] * 50*3
+            headingend[1] = headingend[1] * 50*3
+            scene.add(svg.Line(self.hero.position,self.hero.position - Point2(headingend[0],headingend[1])))
         for obj in self.objects + [self.hero]:
             scene.add(obj.draw())
 
