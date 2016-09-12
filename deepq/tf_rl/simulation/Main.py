@@ -183,8 +183,11 @@ class Main(object):
         self.observation_size = self.eye_observation_size * len(self.observation_lines) + 2 + 2
         #directions of movement  
         self.directions = [Vector2(*d) for d in [[1,0], [0,1], [-1,0],[0,-1],[0.0,0.0]]]
-        self.num_actions = len(self.directions)
         self.moves = [-60,60,0,0,0]
+        if self.settings["Rotation"]:
+            self.num_actions = len(self.moves)
+        else:
+            self.num_actions = len(self.directions)
 
         self.objects_eaten = defaultdict(lambda: 0)
     
