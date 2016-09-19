@@ -5,6 +5,7 @@ import random
 import time
 from tf_rl.simulation import Mazes
 import os
+import copy as cp
 
 from collections import defaultdict
 from euclid import Circle, Point2, Vector2, LineSegment2
@@ -27,16 +28,6 @@ class GameObject(object):
         self.speed = speed 
         self.acceleration= acceleration
         self.bounciness = 1.0
-
-    def wall_collisions(self):
-        """Update speed upon collision with the wall."""
-        world_size = self.settings["world_size"]
-
-        for dim in range(2):
-            if self.position[dim] - self.radius       <= 0               and self.speed[dim] < 0:
-                self.speed[dim] = - self.speed[dim] * self.bounciness
-            elif self.position[dim] + self.radius + 1 >= world_size[dim] and self.speed[dim] > 0:
-                self.speed[dim] = - self.speed[dim] * self.bounciness
 
     def capSpeed(self,speed):
         if(speed[0] > self.maximum_speed[0] or speed[0] < -self.maximum_speed[0]):
@@ -70,11 +61,12 @@ class GameObject(object):
                 self.position+=self.speed*dt
                 self.position=Point2(*self.position)
         #revert to the physics of the original experiment  
-        else:
+        elif self.settings["add_psuedo_physics"]:
             """Move as if dt seconds passed"""
             self.speed = self.capSpeed(self.speed)
             self.position +=(self.speed*dt)
             self.position = Point2(*self.position)
+            
 
     def step(self, dt):
         """Move and bounce of walls."""
@@ -150,11 +142,20 @@ class Main(object):
         
         #Timing
         self.learntime = 0
-        self.time = 0
         self.minTime = 0
 
         #Rotation 
         self.heading = 0
+    
+        #Loging
+        self.log = open("../RunData/" + brainName + "_log.txt","w")
+        self.log.write(str(self.settings))
+        self.log.write("\n")
+        self.log.close()
+        self.log = open("../RunData/" + brainName + "_log.txt","a")
+        self.time_stamp = [0,0,0,0,0,0]
+    
+        self.obstpos = 0
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -194,7 +195,7 @@ class Main(object):
     def makeMaze(self):
         self.maze = self.mazeObject.getMaze(float(self.mazeIterator))
         self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
-        self.hero.position = self.mazeObject.getHeroPos()
+        self.hero.position = cp.deepcopy(self.mazeObject.getHeroPos())
         self.mazeIterator += 1
     
     def convert_to_cartesian(self,heading):
@@ -213,6 +214,7 @@ class Main(object):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
         #action_id = 0
+        self.time_stamp[1] = action_id
         if self.settings["Rotation"]:
             self.heading = self.mapCircle(self.heading + self.moves[action_id])
             self.observation_lines = self.generate_observation_lines()
@@ -223,8 +225,13 @@ class Main(object):
 
         elif self.settings["add_physics"]: 
             self.hero.acceleration= self.directions[action_id]*self.settings["accel"]
-        else:
+        elif self.settings["add_psuedo_physics"]:
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
+        else:
+            #print "before: " +  str(self.mazeObject.heroPos)
+            self.hero.position += self.directions[action_id] * self.settings["delta_p"]
+            #print "after: " +  str(self.mazeObject.heroPos)
+        self.time_stamp[2] = self.heading
 
     def empty(self,array):
         return len(array) == 0
@@ -245,6 +252,8 @@ class Main(object):
             if(not(self.empty(self.maze))):
                 position = self.maze[self.mazeindex]
                 self.mazeindex += 1 
+                self.dijkstra(position)
+                self.minTime =  self.calcmin(position)    
             else:
                 empty = True
         
@@ -254,22 +263,29 @@ class Main(object):
         acceleration = Vector2(0,0)
         if(not empty):
             self.objects.append(GameObject(position, speed, acceleration,  obj_type, self.settings))
-        self.minTime =  self.mazeObject.heroPos.distance(self.mazeObject.goalPos)/(self.settings["maximum_speed"][0])
 
     def step(self, dt,fps,actionEvery):
         """Simulate all the objects for a given ammount of time.
 
         Also resolve collisions with the hero"""
         self.counter += 1
-        self.time = self.time + dt
+        #print self.counter
+        self.time_stamp[3] = self.mazeObject.goalPos
         for obj in self.objects + [self.hero] :
+            if obj.obj_type == "enemy":
+                self.time_stamp[4] = obj.position 
             obj.step(dt)
+            if obj.obj_type == "hero" :
+                self.time_stamp[0] = obj.position
         self.resolve_collisions(fps,actionEvery)
+        self.log.write(str(self.time_stamp))
+        self.log.write("\n")
+        self.time_stamp[5] = 0
         
     def runComplete(self):
-        self.timeOut = (self.time)/self.minTime
+        self.timeOut = (self.counter)/self.minTime
         self.timeoutArray.append(self.timeOut)
-        self.time = 0
+        self.counter = 0
         
     def runFail(self):
         self.timeStart = time.time()
@@ -285,6 +301,8 @@ class Main(object):
             self.successArray.append(1)
         self.runComplete()
         if ob.obj_type == "enemy" or ob.obj_type == "square":
+            print "crash"
+            self.time_stamp[5] = "crash"
             self.successArray.append(0)
             self.runFail()
         self.successRate = sum(self.successArray,0.0)/float(len(self.successArray))
@@ -361,11 +379,73 @@ class Main(object):
                     obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
                 else:
                     done = True
-        self.minTime =  self.mazeObject.heroPos.distance(self.mazeObject.goalPos)/(self.settings["maximum_speed"][0])
-                    
+        self.dijkstra(obstpos)
+        self.minTime = self.calcmin(obstpos)
+
+    def make_matrix(self,obst):
+        x = 1+ int(math.fabs(self.mazeObject.heroPos[0] - self.mazeObject.goalPos[0])/self.settings["delta_p"])
+        y = 1+ int(math.fabs(self.mazeObject.heroPos[1] - self.mazeObject.goalPos[1])/self.settings["delta_p"])
+        matrix = np.zeros((y,x))
+        top = 0
+        right = 0
+        if (self.mazeObject.heroPos[1] > self.mazeObject.goalPos[1]):
+            top = obst[1] - self.mazeObject.goalPos[1]
+            if(self.mazeObject.heroPos[0]> self.mazeObject.goalPos[0]):
+                right = obst[0] - self.mazeObject.goalPos[0]
+                maxtrix[0][0] = 3
+                matrix[y-1][x-1] = 1
+            else:
+                right = obst[0] - self.mazeObject.heroPos[0]
+                matrix[0][x-1] = 3
+                matrix[y-1][0] = 1
+        else:
+            top = obst[1] - self.mazeObject.heroPos[1]
+            if(self.mazeObject.heroPos[0]> self.mazeObject.goalPos[0]):
+                right = obst[0] - self.mazeObject.goalPos[0]
+                matrix[0][x-1] = 1
+                matrix[y-1][0] = 3
+            else:
+                right = obst[0] - self.mazeObject.heroPos[0]
+                matrix[y-1][x-1] = 3
+                matrix[0][0] = 1
+
+        matrix[int(top/20)][int(right/20)] = 2
+        mat = np.zeros((y+2,x+2))
+        mat[1][1:x+1] = matrix
+        return mat
+
+    def dijkstra(self,obst):
+        #make matrix first
+        matrix = self.make_matrix(obst)
+        
+        #apply dijkstra's algorithm
+        
+
+    def isClose(self,a,b):
+        return math.fabs(a - b) < 30
+
+    def calcmin(self,obst):
+        minTime = 50000
+        if self.settings["Rotation"]:
+            1+1
+        if self.settings["add_physics"]:
+            1+1
+        elif self.settings["add_psuedo_physics"]:
+            1+1
+        else:
+            if self.isClose(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]) or self.isClose(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]):
+                print "special calc"
+                self.dijkstra(obst)   
+            else:
+                minTime =30*(math.fabs(self.mazeObject.heroPos[0] - self.mazeObject.goalPos[0])+math.fabs(self.mazeObject.heroPos[1] - self.mazeObject.goalPos[1]))/10
+                print minTime,self.mazeObject.heroPos,self.mazeObject.goalPos
+        return minTime
+            
 
     def nextMaze(self, obj):
         if obj.obj_type == "friend":
+            print "score!"
+            self.time_stamp[5] = "score"
             self.reassign()
             self.hero.position = self.mazeObject.getHeroPos()
             obj.position = self.mazeObject.getGoalPos()
@@ -433,14 +513,14 @@ class Main(object):
         collision_distance = 2 * self.settings["object_radius"]
         collision_distance2 = collision_distance ** 2
         to_remove = []
-        if(self.time >= self.minTime * self.settings["Timeout"]):
+        if(self.counter >= self.minTime * self.settings["Timeout"]):
             obj = GameObject(Point2(200,200), 0.0, 0.0,  "enemy", self.settings)
             to_remove.append(obj)
             self.updateSuccess(obj)
-            self.time = 0
             self.runs += 1
             self.object_reward += self.settings["object_reward"]["enemy"]
-            print("timeout")
+            self.time_stamp[5] = "Timeout"
+            print("Timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
                 if(self.interSquare(self.hero.position,obj.position)):
@@ -844,6 +924,7 @@ class Main(object):
             headingend[0] = headingend[0] * 50*3
             headingend[1] = headingend[1] * 50*3
             scene.add(svg.Line(self.hero.position,self.hero.position - Point2(headingend[0],headingend[1])))
+
         for obj in self.objects + [self.hero]:
             scene.add(obj.draw())
 
