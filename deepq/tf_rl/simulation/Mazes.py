@@ -1,6 +1,7 @@
 #This is the maze class. It is used to generate all mazes in simulation
 from euclid import Circle, Point2, Vector2, LineSegment2
 import random as r
+import copy as cp
 
 class Maze(object):
     def __init__(self):
@@ -21,14 +22,14 @@ class Maze(object):
         return self.goalPos
     
     def getHeroPos(self):
-        return self.heroPos
+        return cp.deepcopy(self.heroPos)
     
     def setPositions(self,i):
         if(i == 0.0 or i == 10.0):
             self.heroPos = Point2(45,260)
             self.goalPos = Point2(655,250)
         if(i == 1.0 or i == 0.1):
-            self.heroPos = Point2(550,260)
+            self.heroPos = Point2(550,250)
             self.goalPos = Point2(45,250)
         if(i == 2.0):
             self.heroPos = Point2(45,60)

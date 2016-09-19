@@ -82,6 +82,7 @@ def simulate(simulation,
     frame_no = 0
     running = True
     timeStart = simulation_started_time
+    print "acion_every: " + str(action_every)
     while running:
         for _ in range(chunks_per_frame):
             simulation.step(chunk_length_s,fps,action_every)

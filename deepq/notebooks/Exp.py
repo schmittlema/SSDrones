@@ -12,6 +12,7 @@ get_ipython().magic(u'matplotlib auto')
 # In[2]:
 
 import numpy as np
+import sys
 import tempfile
 import time
 from threading import Thread
@@ -19,7 +20,7 @@ from tf_rl.controller import DiscreteDeepQ
 from tf_rl.simulation import Main
 from tf_rl import simulate
 from tf_rl.models import MLP
-
+from tf_rl import replay
 
 
 
@@ -44,12 +45,13 @@ current_settings = {
         'square': 'red',
     },
     'object_reward': {
-        'friend': 1000,
-        'enemy': -1000,
+        'friend': 10,
+        'enemy': -10,
         'square': -100
     },
     'hero_bounces_off_walls': False,
     'add_physics':False,
+    'add_psuedo_physics': False,
     'mod_observation':False, 
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
@@ -67,11 +69,12 @@ current_settings = {
     "tolerable_distance_to_wall": 700,
     "wall_distance_penalty":  -0.0,
     "delta_v": 50,
+    "delta_p": 20,
     "speed":0,
     "accel":50,
     "minimum_success_rate": 1.0,
     "Timeout":5 ,
-    "Rotation" :True 
+    "Rotation" :False 
 }
 
 
@@ -80,9 +83,11 @@ current_settings = {
 notString = False
 notRight = True
 saver = False
+replaying = False
+logname = ""
 while(notRight):
     try:
-        choice = input("(A)Start new Experiment" + "\n"+"(B)Reload from file?" + "\n")
+        choice = input("(A)Start new Experiment" + "\n"+"(B)Reload from file?" + "\n"+"(C)Replay from Log" + "\n")
         if(choice == "A" or choice =="a"):
             notString = True
             notRight = False
@@ -90,6 +95,10 @@ while(notRight):
             notRight = False
             notString = True
             saver = True
+        if(choice == "C" or choice == "c"):
+            notRight = False
+            notString = True
+            replaying = True
         if (not notString):
             print("Please enter A or B")
     except (NameError,SyntaxError):
@@ -98,13 +107,18 @@ while(notRight):
 brainName = "null"
 while(notString):
     try:
-        if(not saver):
+        if(not saver and not replay):
             brainName = input("Enter new brain file name: ")
+        if(replaying):
+            logname = input("Enter log file name: ")
+            replay(logname)
+            sys.exit()
         else:
             brainName = input("Enter brain file name: (.ckpt not included) ")
         notString = False
     except (NameError,SyntaxError):
         print("Please enter as a string")
+
 notString = True
 gpu = False
 while(notString):
@@ -190,7 +204,7 @@ else:
 FPS          = 100
 ACTION_EVERY = 3
     
-fast_mode = False 
+fast_mode = True 
 if fast_mode:
     WAIT, VISUALIZE_EVERY = False, 10
 else:
@@ -222,6 +236,7 @@ try:
                      save_path="/tmp/")
 
 except (KeyboardInterrupt,IndexError):
+    g.log.close()
     g.plot_timing(smoothing=100)
     g.saveTotals()
     print("Complete")
