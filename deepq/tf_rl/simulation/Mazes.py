@@ -4,11 +4,14 @@ import random as r
 import copy as cp
 
 class Maze(object):
-    def __init__(self):
+    def __init__(self,x,y,d):
         self.heroPos = 0
         self.goalPos = 0
         self.mazes = []
         self.smazes = []
+        self.x = x
+        self.y = y
+        self.divider = d
         self.makeMazes()
        
     def getMaze(self,i):
@@ -55,6 +58,9 @@ class Maze(object):
         if(i == 9.0):
             self.heroPos = Point2(45,260)
             self.goalPos = Point2(655,400)
+        if(i == 11):
+            self.heroPos = Point2(self.x - 20,int(self.y/2))
+            self.goalPos = Point2(20,int(self.y/2))
            
     def saveMaze(self,maze,name):
         path = "tf_rl/simulation/crazyMazes/" + name
@@ -71,7 +77,7 @@ class Maze(object):
         return maze
         
     def makeMazes(self):
-        for i in range(0,11):
+        for i in range(0,12):
             self.mazes.append(self.makeMaze(i))
             self.smazes.append(self.makeSMaze(i))
             
@@ -96,10 +102,11 @@ class Maze(object):
         if(i == 8):
             return self.cMaze2()
         if(i == 9):
-            return self.cMaze3()
+            return self.crazyCircle()#return self.cMaze3()
         if(i == 10):
             return self.wallsOnly()#self.cMaze3()[:130]
-    
+        if(i == 11):
+            return self.oneObst()
     
     def makeSMaze(self,i):
         blank = []
@@ -126,8 +133,9 @@ class Maze(object):
             #return self.sMaze3()
         if(i == 10):
             return []
-        
-        
+        if(i == 11):
+            return []
+
     #Circle mazes
     def wallsOnly(self):
         maze = []
@@ -144,7 +152,7 @@ class Maze(object):
 
     def oneObst(self):
         maze = []#self.wallsOnly()
-        maze.append(Point2(350,250))
+        maze.append(Point2(int(self.x/2),int(self.y/2)))
         return maze
     
     def grid(self):
@@ -170,7 +178,8 @@ class Maze(object):
         return maze
     
     def crazyCircle(self):
-        maze = self.wallsOnly()
+        #maze = self.wallsOnly()
+        maze = []
         for i in range(0,30):
             maze.append(Point2(r.randint(70,640),r.randint(0,500)))
         #self.saveMaze(maze,"crazycircle3.txt")
