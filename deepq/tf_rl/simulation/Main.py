@@ -1,6 +1,7 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+np.set_printoptions(threshold=np.inf)
 import random
 import time
 from tf_rl.simulation import Mazes
@@ -13,6 +14,7 @@ from euclid import Circle, Point2, Vector2, LineSegment2
 import tf_rl.simulate
 import tf_rl.utils.svg as svg
 import tf_rl.utils.geometry as geo
+from tf_rl import bfs
 
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -105,8 +107,8 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 1 
-        self.mazeObject = Mazes.Maze()
+        self.mazeIterator = 9 
+        self.mazeObject = Mazes.Maze(self.settings["world_size"][0],self.settings["world_size"][1],self.settings["delta_p"])
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
         
@@ -138,11 +140,13 @@ class Main(object):
         print(fileName)
         print(brainName + ".txt")
         self.pp = PdfPages("../RunData/" + fileName)
-        self.currReward = 0
         
+        self.seq = []
+        self.dmatrix = []
+
         #Timing
         self.learntime = 0
-        self.minTime = 0
+        self.minTime = 0 
 
         #Rotation 
         self.heading = 0
@@ -156,10 +160,22 @@ class Main(object):
         self.time_stamp = [0,0,0,0,0,0]
     
         self.obstpos = 0
+        
+        
+        #for testing dijkstra's algorithm
+        matrix = np.zeros((5,5))
+        matrix[0][0] = 3
+        matrix[4][4] = 1
+        matrix[0][4] = 2
+        matrix[4][1] = 2
+        matrix[3][1] = 2
+        matrix[2][1] = 2
+        self.matrix = matrix
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
 
+        self.darray = []
         self.objects = []
         for obj_type, number in settings["num_objects"].items():
             if(obj_type == "enemy"):
@@ -169,9 +185,13 @@ class Main(object):
             for _ in range(number):
                 self.spawn_object(obj_type)
 
+        self.make_dmatrix(self.darray)
+        self.minTime = self.calcmin()    
         self.observation_lines = self.generate_observation_lines()
 
         self.object_reward = 0
+        print self.dmatrix
+        self.currReward = self.dmatrix[int(self.mazeObject.heroPos[1]/self.settings["delta_p"])][int(self.mazeObject.heroPos[0]/self.settings["delta_p"])]
         self.collected_rewards = []
 
         # every observation_line sees the nearest friend or enemy
@@ -191,12 +211,21 @@ class Main(object):
             self.num_actions = len(self.directions)
 
         self.objects_eaten = defaultdict(lambda: 0)
+
+        """ a = [0,0,0,4,4]
+        #self.valid_moves(a,matrix)
+        while(not(self.finished(a))):
+            self.update_moves(matrix,a)
+        print self.finished(a)
+        print self.find_sequence(a,[])
+        print a
+        print matrix"""
     
     def makeMaze(self):
         self.maze = self.mazeObject.getMaze(float(self.mazeIterator))
         self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
         self.hero.position = cp.deepcopy(self.mazeObject.getHeroPos())
-        self.mazeIterator += 1
+        #self.mazeIterator += 1
     
     def convert_to_cartesian(self,heading):
         h = (heading * math.pi)/(200-20)
@@ -228,10 +257,12 @@ class Main(object):
         elif self.settings["add_psuedo_physics"]:
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
         else:
-            #print "before: " +  str(self.mazeObject.heroPos)
+            pos = cp.copy(self.hero.position)
             self.hero.position += self.directions[action_id] * self.settings["delta_p"]
-            #print "after: " +  str(self.mazeObject.heroPos)
+            if self.hero.position[0] -10 < 0 or self.hero.position[0] +10> self.settings["world_size"][0] or self.hero.position[1] -10 < 0 or self.hero.position[1] +10 > self.settings["world_size"][1]:
+                self.hero.position = pos 
         self.time_stamp[2] = self.heading
+        self.counter += 1
 
     def empty(self,array):
         return len(array) == 0
@@ -252,8 +283,7 @@ class Main(object):
             if(not(self.empty(self.maze))):
                 position = self.maze[self.mazeindex]
                 self.mazeindex += 1 
-                self.dijkstra(position)
-                self.minTime =  self.calcmin(position)    
+                self.darray.append(position)
             else:
                 empty = True
         
@@ -268,8 +298,6 @@ class Main(object):
         """Simulate all the objects for a given ammount of time.
 
         Also resolve collisions with the hero"""
-        self.counter += 1
-        #print self.counter
         self.time_stamp[3] = self.mazeObject.goalPos
         for obj in self.objects + [self.hero] :
             if obj.obj_type == "enemy":
@@ -301,7 +329,6 @@ class Main(object):
             self.successArray.append(1)
         self.runComplete()
         if ob.obj_type == "enemy" or ob.obj_type == "square":
-            print "crash"
             self.time_stamp[5] = "crash"
             self.successArray.append(0)
             self.runFail()
@@ -354,38 +381,113 @@ class Main(object):
 
     def random_selector(self,a,b):
         if a > b:
-            return random.randint(b,a)    
+            return self.cast(20,random.randint(b,a))    
         else:
-            return random.randint(a,b)
+            return self.cast(20,random.randint(a,b))
+
+    def random_selector_online(self,x1,y1,x2,y2):
+        if math.fabs(x1 - x2)<40 or math.fabs(y1 - y2)<40:
+             Point2(self.cast(20,self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0])),self.cast(20,self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1])))
+        else:
+            slope = (y2-y1)/20           
+            result = []
+            xslope = 1 if x2>x1 else -1
+            start = [x1,y1]
+            endpoint = [x1,y1]
+            count = 20
+            print x1,y1
+            print x2,y2
+            print xslope
+            print slope
+            while(xslope*count + x1 != x2):
+                x = start[0] + (xslope * count)
+                count += 20
+                endpoint = [x,(slope*(count/2)) + y1]
+                #print endpoint
+                result.append(endpoint)
+
+                
+            print result
+            #return result[random.randint(1,len(result)-1)]
+        
+        
+            
+
+    def cast(self,cast,val):
+        if val%cast <(cast/2):
+            return val - (val%cast)
+        else:
+            return val + (cast-(val%cast))
     
     def reassign(self):
         collision_distance = 2 * self.settings["object_radius"]
-        collision_distance2 = collision_distance ** 2
         done = False
-        self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
-        self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
-        obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
+        self.mazeObject.heroPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+        self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+        obstpos = Point2(self.cast(20,self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0])),self.cast(20,self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1])))
+        #print(self.random_selector_online(self.mazeObject.heroPos[0],self.mazeObject.heroPos[1],self.mazeObject.goalPos[0],self.mazeObject.goalPos[1]))
+
+        while(not(done)):
+            a = self.mazeObject.heroPos.distance(obstpos) < collision_distance+30
+            b = self.mazeObject.goalPos.distance(obstpos) < collision_distance+30
+            c = self.mazeObject.goalPos.distance(self.mazeObject.heroPos) < collision_distance+30
+
+            if a:
+                done = False
+                self.mazeObject.heroPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+                obstpos = Point2(self.cast(20,self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0])),self.cast(20,self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1])))
+            if b:
+                done = False
+                self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+                obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
+            if c:
+                done = False
+                self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+            if not(a or b or c):
+                done = True
+
+        for obj in self.objects:
+            if (obj.obj_type == "enemy"):
+                obj.position = cp.copy(obstpos)
+
+        obstarray = [obstpos]
+        self.make_dmatrix(obstarray)
+        self.minTime = self.calcmin()
+
+    def reassign2(self):
+        collision_distance = 2 * self.settings["object_radius"]
+        done = False
+        self.mazeObject.heroPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+        self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
         while(not(done)):
             for obj in self.objects:
-                if (obj.obj_type == "enemy"):
-                    obj.position = obstpos
-                if self.squared_distance(self.mazeObject.heroPos, obj.position) < collision_distance2 + 30:
+                a = self.mazeObject.heroPos.distance(obj.position) < collision_distance+30
+                b = self.mazeObject.goalPos.distance(obj.position) < collision_distance+30
+                c = self.mazeObject.goalPos.distance(self.mazeObject.heroPos) < collision_distance+30
+
+                if a:
                     done = False
-                    self.mazeObject.heroPos = Point2(random.randint(10,650),random.randint(10,450))
-                    obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
-                if self.squared_distance(self.mazeObject.goalPos, obj.position) < collision_distance2 + 30:
+                    self.mazeObject.heroPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+                if b:
                     done = False
-                    self.mazeObject.goalPos = Point2(random.randint(10,650),random.randint(10,450))
-                    obstpos = Point2(self.random_selector(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]),self.random_selector(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]))
-                else:
+                    self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+                if c:
+                    done = False
+                    self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
+                if not(a or b or c):
                     done = True
-        self.dijkstra(obstpos)
-        self.minTime = self.calcmin(obstpos)
+
+        darray = []
+        for o in self.objects:
+            darray.append(o.position)
+
+        self.make_dmatrix(darray)
+        self.minTime = self.calcmin()
 
     def make_matrix(self,obst):
         x = 1+ int(math.fabs(self.mazeObject.heroPos[0] - self.mazeObject.goalPos[0])/self.settings["delta_p"])
         y = 1+ int(math.fabs(self.mazeObject.heroPos[1] - self.mazeObject.goalPos[1])/self.settings["delta_p"])
-        matrix = np.zeros((y,x))
+        matrix = np.zeros((y,x),dtype=object)
         top = 0
         right = 0
         if (self.mazeObject.heroPos[1] > self.mazeObject.goalPos[1]):
@@ -410,22 +512,178 @@ class Main(object):
                 matrix[0][0] = 1
 
         matrix[int(top/20)][int(right/20)] = 2
-        mat = np.zeros((y+2,x+2))
+        mat = np.zeros((y+2,x+2),dtype = object)
         mat[1][1:x+1] = matrix
         return mat
+
+    def make_full_matrix(self,obstarray):
+        x = int(self.settings["world_size"][0]/self.settings["delta_p"])  
+        y = int(self.settings["world_size"][1]/self.settings["delta_p"])   
+        matrix = np.zeros((y,x),dtype=object)
+        hx = int(self.mazeObject.getHeroPos()[0]/self.settings["delta_p"])
+        hy = int(self.mazeObject.getHeroPos()[1]/self.settings["delta_p"])
+        matrix[hy][hx] = 1
+        
+        gx = int(self.mazeObject.getGoalPos()[0]/self.settings["delta_p"])
+        gy = int(self.mazeObject.getGoalPos()[1]/self.settings["delta_p"])
+        matrix[gy][gx] = 3
+
+        for o in obstarray:
+            ox = int(o[0]/self.settings["delta_p"])
+            oy = int(o[1]/self.settings["delta_p"])
+            matrix[oy][ox] = 2
+        return matrix
+    
+    def valid_moves(self,array,mat):
+        x = array[3]
+        y = array[4]
+        mat[x][y] = 2 
+        order = 1
+        a5 = cp.copy(array[5])
+        if x !=0:
+            if mat[x-1][y] != 2:
+                if mat[x-1][y] == 3:
+                    a5.append(order)
+                    array.append([array[0]+1,"*","u",x-1,y,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+                else:
+                    a5.append(order)
+                    array.append([array[0]+1,0,"u",x-1,y,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+        if x != len(mat)-1:
+            if mat[x+1][y] != 2:
+                if mat[x+1][y] == 3:
+                    a5.append(order)
+                    array.append([array[0]+1,"*","d",x+1,y,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+                else:
+                    a5.append(order)
+                    array.append([array[0]+1,0,"d",x+1,y,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+        if y != 0:
+            if mat[x][y-1] != 2:
+                if mat[x][y-1]==3:
+                    a5.append(order)
+                    array.append([array[0]+1,"*","l",x,y-1,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+                else:
+                    a5.append(order)
+                    array.append([array[0]+1,0,"l",x,y-1,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order +=1
+        if y != len(mat[0]) -1:
+            if mat[x][y+1] != 2:
+                if mat[x][y+1] == 3:
+                    a5.append(order)
+                    array.append([array[0]+1,"*","r",x,y+1,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order += 1
+                else:
+                    a5.append(order)
+                    array.append([array[0]+1,0,"r",x,y+1,a5])
+                    a5 = cp.copy(a5[:-1])
+                    order += 1
+
+    def update_moves(self,mat,array):
+        #base case
+        if len(array) == 6:
+            if(array[1] != "*"):
+                self.valid_moves(array,mat) 
+        else:
+            for a in array[6:]:
+                matrix = cp.copy(mat)
+                matrix[array[3]][array[4]] = 2
+                self.update_moves(matrix,a)
+    
+    def finished(self,array):
+        if len(array) == 6:
+           return array[1] == '*' 
+        else:
+            for a in array[6:]:
+                if (self.finished(a)):
+                    return True
+        
+    def find_sequence(self,array):
+        if len(array) ==6:
+            if array[1] == "*":
+                self.seq.append(array[5])
+        else:
+            for a in array[6:]:
+                self.find_sequence(a)
+    
+    def decode_sequences(self,moves):
+        seq = cp.copy(self.seq)
+        self.seq =[]
+        output = []
+        for s in range(len(seq)):
+            s = self.find_path(seq[s],moves,[],len(seq[s])) 
+            output.append(s)
+        return output
+    
+    def find_path(self,seq,array,solution,num):
+        a5 = array[5]
+        if a5[-1] == seq[0]:
+            solution.append(array[2])
+            seq = cp.copy(seq[1:])
+
+            if len(array) >6:
+                for a in array[6:]:
+                    a = cp.copy(self.find_path(seq,a,solution,num))
+                    if isinstance(a,list):
+                        if len(a) == num:
+                            return a
+            else:
+                return solution
+
+    def update_mat(self,seq,array,solution,num,mat):
+        a5 = array[5]
+        if a5[-1] == seq[0]:
+            mat[array[3]][array[4]] = num - array[0]
+            seq = cp.copy(seq[1:])
+
+            if len(array) >6:
+                for a in array[6:]:
+                    a = self.update_mat(seq,a,solution,num,mat)
+                    if isinstance(a,list): # <----------change list to matrix or whatever works
+                        if len(a) == num:
+                            return a
+            else:
+                return mat
 
     def dijkstra(self,obst):
         #make matrix first
         matrix = self.make_matrix(obst)
-        
         #apply dijkstra's algorithm
+        for x in range(len(matrix)):
+            for y in range(len(matrix[x])):
+                if matrix[x,y] == 1:
+                    moves = [0,0,0,x,y,[0]]
+                    #self.update_moves(matrix,moves) 
+
+        while(not(self.finished(moves))):
+            self.update_moves(matrix,moves) 
+        self.find_sequence(moves)
         
+
+    def make_dmatrix(self,obstarray):
+        point = []
+        matrix = self.make_full_matrix(obstarray)
+        for x in range(len(matrix)):
+            for y in range(len(matrix[x])):
+                if matrix[x,y] == 3:
+                    point.append(x)
+                    point.append(y)
+        self.dmatrix = bfs(matrix,point)
 
     def isClose(self,a,b):
         return math.fabs(a - b) < 30
 
-    def calcmin(self,obst):
-        minTime = 50000
+    def calcmin(self):
         if self.settings["Rotation"]:
             1+1
         if self.settings["add_physics"]:
@@ -433,25 +691,27 @@ class Main(object):
         elif self.settings["add_psuedo_physics"]:
             1+1
         else:
-            if self.isClose(self.mazeObject.heroPos[0],self.mazeObject.goalPos[0]) or self.isClose(self.mazeObject.heroPos[1],self.mazeObject.goalPos[1]):
-                print "special calc"
-                self.dijkstra(obst)   
-            else:
-                minTime =30*(math.fabs(self.mazeObject.heroPos[0] - self.mazeObject.goalPos[0])+math.fabs(self.mazeObject.heroPos[1] - self.mazeObject.goalPos[1]))/10
-                print minTime,self.mazeObject.heroPos,self.mazeObject.goalPos
+            minTime = self.dmatrix[int(self.mazeObject.heroPos[1]/self.settings["delta_p"])][int(self.mazeObject.heroPos[0]/self.settings["delta_p"])]
         return minTime
             
 
     def nextMaze(self, obj):
         if obj.obj_type == "friend":
-            print "score!"
+            print("score!")
             self.time_stamp[5] = "score"
-            self.reassign()
+            if self.mazeIterator == 11:
+                self.reassign()
+            else:
+                self.reassign2()
             self.hero.position = self.mazeObject.getHeroPos()
             obj.position = self.mazeObject.getGoalPos()
             for obj in self.objects:
                 if(obj.obj_type == "hero"):
                     obj.position = self.hero.position
+            self.currReward = self.dmatrix[int(self.mazeObject.heroPos[1]/self.settings["delta_p"])][int(self.mazeObject.heroPos[0]/self.settings["delta_p"])]
+
+
+
         """see if the agent has met the criteria for advancement, advance if it has"""
         '''if(self.runs >= 100 and self.successRate >= self.settings["minimum_success_rate"]):
             self.offset = 0.0
@@ -516,7 +776,6 @@ class Main(object):
         if(self.counter >= self.minTime * self.settings["Timeout"]):
             obj = GameObject(Point2(200,200), 0.0, 0.0,  "enemy", self.settings)
             to_remove.append(obj)
-            self.updateSuccess(obj)
             self.runs += 1
             self.object_reward += self.settings["object_reward"]["enemy"]
             self.time_stamp[5] = "Timeout"
@@ -525,23 +784,24 @@ class Main(object):
             if(obj.obj_type == "square"):
                 if(self.interSquare(self.hero.position,obj.position)):
                     to_remove.append(obj)
-                    self.updateSuccess(obj)
                     self.runs += 1
             elif self.squared_distance(self.hero.position, obj.position) < collision_distance2:
                 to_remove.append(obj)
-                self.updateSuccess(obj)
                 self.runs += 1
         for obj in to_remove:
             if(obj.obj_type == "square"):
                 self.objects_eaten["enemy"] += 1
             else:
                 self.objects_eaten[obj.obj_type] += 1
+            if(obj.obj_type == "enemy"):
+                print("crash")
             self.object_reward += self.settings["object_reward"][obj.obj_type]
             self.hero.position = self.mazeObject.getHeroPos()
             self.hero.speed = Vector2(*self.settings["hero_initial_speed"])
             self.hero.acceleration = Vector2(*self.settings["hero_initial_accel"])
             self.counter = 0
             self.nextMaze(obj)
+            self.updateSuccess(obj)
 
             
 
@@ -700,6 +960,8 @@ class Main(object):
         # add heading to the observation vector       
         observation[self.observation_size-2] = self.mazeObject.getGoalPos()[0]-self.hero.position[0]
         observation[self.observation_size-1] = self.mazeObject.getGoalPos()[1]-self.hero.position[1]
+        
+        #print(observation)
         return observation
 
     def old_observation(self):
@@ -783,32 +1045,39 @@ class Main(object):
 
         return observation
     
-    def distance_to_walls(self):
-        """Returns distance of a hero to walls"""
-        res = float('inf')
-        for wall in self.walls:
-            res = min(res, self.hero.position.distance(wall))
-        return res - self.settings["object_radius"]
-    
     
     def distance_to_goal(self):
         return self.hero.position.distance(self.mazeObject.getGoalPos())
     
-                                           
     def collect_reward(self):
-        """Return accumulated object eating score + current distance to goal score"""
+        x = int(self.hero.position[0]/self.settings["delta_p"])
+        y = int(self.hero.position[1]/self.settings["delta_p"])
+        curr = self.dmatrix[y][x]
+        if isinstance(curr,list):
+            curr = self.currReward
+        reward = self.currReward - curr
+        if curr == 0:
+            reward = 5
+        self.collected_rewards.append(reward)
+        self.currReward = curr
+        return reward
+                                           
+    """def collect_reward(self):
+        #Return accumulated object eating score + current distance to goal score
         togoal = 1000 -self.distance_to_goal()
-        total_reward = self.object_reward + togoal
+        total_reward = togoal
         self.runReward.append(total_reward)
-        reward = int((total_reward - self.currReward))
+        reward = int(self.object_reward+(total_reward - self.currReward))
         if self.object_reward != 0:
-            self.currReward = 0
+            reward = self.object_reward
+            self.currReward = 1000-self.mazeObject.heroPos.distance(self.mazeObject.getGoalPos())
+
         else:
             self.currReward = total_reward
 
         self.object_reward = 0
         self.collected_rewards.append(reward)
-        return reward
+        return reward"""
 
     def plot_reward(self, smoothing = 30):
         """Plot evolution of reward over time."""

@@ -45,14 +45,14 @@ current_settings = {
         'square': 'red',
     },
     'object_reward': {
-        'friend': 10,
-        'enemy': -10,
+        'friend': 100,
+        'enemy': -50,
         'square': -100
     },
     'hero_bounces_off_walls': False,
     'add_physics':False,
     'add_psuedo_physics': False,
-    'mod_observation':False, 
+    'mod_observation':True, 
     'world_size': (700,500),
     'hero_initial_position': [600, 440],
     'hero_initial_speed':    [0,   0],
@@ -235,7 +235,7 @@ try:
                      simulation_resolution=0.001,
                      save_path="/tmp/")
 
-except (KeyboardInterrupt,IndexError):
+except (KeyboardInterrupt):
     g.log.close()
     g.plot_timing(smoothing=100)
     g.saveTotals()
