@@ -190,7 +190,7 @@ class Main(object):
         self.observation_lines = self.generate_observation_lines()
 
         self.object_reward = 0
-        print self.dmatrix
+        print(self.dmatrix)
         self.currReward = self.dmatrix[int(self.mazeObject.heroPos[1]/self.settings["delta_p"])][int(self.mazeObject.heroPos[0]/self.settings["delta_p"])]
         self.collected_rewards = []
 
@@ -224,7 +224,7 @@ class Main(object):
     def makeMaze(self):
         self.maze = self.mazeObject.getMaze(float(self.mazeIterator))
         self.smaze = self.mazeObject.getSMaze(self.mazeIterator)
-        self.hero.position = cp.deepcopy(self.mazeObject.getHeroPos())
+        self.hero.position = cp.copy(self.mazeObject.getHeroPos())
         #self.mazeIterator += 1
     
     def convert_to_cartesian(self,heading):
@@ -395,10 +395,6 @@ class Main(object):
             start = [x1,y1]
             endpoint = [x1,y1]
             count = 20
-            print x1,y1
-            print x2,y2
-            print xslope
-            print slope
             while(xslope*count + x1 != x2):
                 x = start[0] + (xslope * count)
                 count += 20
@@ -407,7 +403,6 @@ class Main(object):
                 result.append(endpoint)
 
                 
-            print result
             #return result[random.randint(1,len(result)-1)]
         
         
@@ -460,6 +455,7 @@ class Main(object):
         self.mazeObject.heroPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
         self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
         while(not(done)):
+            done = True
             for obj in self.objects:
                 a = self.mazeObject.heroPos.distance(obj.position) < collision_distance+30
                 b = self.mazeObject.goalPos.distance(obj.position) < collision_distance+30
@@ -474,8 +470,6 @@ class Main(object):
                 if c:
                     done = False
                     self.mazeObject.goalPos = Point2(self.cast(20,random.randint(10,self.settings["world_size"][0]-20)),self.cast(20,random.randint(10,self.settings["world_size"][1]-20)))
-                if not(a or b or c):
-                    done = True
 
         darray = []
         for o in self.objects:
