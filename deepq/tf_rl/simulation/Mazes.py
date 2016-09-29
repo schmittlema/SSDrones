@@ -25,7 +25,7 @@ class Maze(object):
         return self.goalPos
     
     def getHeroPos(self):
-        return cp.deepcopy(self.heroPos)
+        return cp.copy(self.heroPos)
     
     def setPositions(self,i):
         if(i == 0.0 or i == 10.0):
