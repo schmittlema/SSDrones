@@ -7,7 +7,7 @@ import tensorflow as tf
 
 get_ipython().magic(u'load_ext autoreload')
 get_ipython().magic(u'autoreload 2')
-get_ipython().magic(u'matplotlib auto')
+#get_ipython().magic(u'matplotlib auto')
 
 # In[2]:
 
@@ -236,7 +236,6 @@ try:
                      save_path="/tmp/")
 
 except (KeyboardInterrupt):
-    g.log.close()
     g.plot_timing(smoothing=100)
     g.saveTotals()
     print("Complete")

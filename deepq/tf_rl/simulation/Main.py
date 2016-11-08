@@ -1,5 +1,5 @@
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(threshold=np.inf)
 import random
@@ -107,7 +107,7 @@ class Main(object):
         self.maze = []
         self.mazeindex = 0
         #Change mazeIterator to change which maze to start on
-        self.mazeIterator = 9 
+        self.mazeIterator = 9 #11 
         self.mazeObject = Mazes.Maze(self.settings["world_size"][0],self.settings["world_size"][1],self.settings["delta_p"])
         self.startTime = time.strftime("%d:%m:%Y:%H")
         self.offset = 0.0
@@ -127,6 +127,10 @@ class Main(object):
         self.averageRuns = []
         self.averageSuccessRate = []
         self.averageTimeout = []
+        
+        #for logging repeated moves
+        self .repeat = 0
+        self.old_action = ""
         
         #Squares
         self.smaze = []
@@ -157,20 +161,17 @@ class Main(object):
         self.log.write("\n")
         self.log.close()
         self.log = open("../RunData/" + brainName + "_log.txt","a")
-        self.time_stamp = [0,0,0,0,0,0]
+        if self.settings['Rotation']:
+            self.time_stamp = [0,0,0]
+        else:
+            self.time_stamp = [0,0]
     
         self.obstpos = 0
         
+        #for bumping
+        self.colide= False
         
-        #for testing dijkstra's algorithm
-        matrix = np.zeros((5,5))
-        matrix[0][0] = 3
-        matrix[4][4] = 1
-        matrix[0][4] = 2
-        matrix[4][1] = 2
-        matrix[3][1] = 2
-        matrix[2][1] = 2
-        self.matrix = matrix
+        
 
         if not self.settings["hero_bounces_off_walls"]:
             self.hero.bounciness = 0.0
@@ -239,6 +240,14 @@ class Main(object):
             h = heading - 360
         return h        
 
+    def collided(self):
+        collision_distance = 2 * self.settings["object_radius"]
+        for obj in self.objects:
+            if obj.obj_type =="enemy":
+                if self.hero.position.distance(obj.position) < collision_distance:
+                    return True
+        return False  
+
     def perform_action(self, action_id):
         """Change speed to one of hero vectors"""
         assert 0 <= action_id < self.num_actions #check to see if valid action
@@ -257,11 +266,14 @@ class Main(object):
         elif self.settings["add_psuedo_physics"]:
             self.hero.speed+=self.directions[action_id] * self.settings["delta_v"] 
         else:
+            self.colide = False
             pos = cp.copy(self.hero.position)
             self.hero.position += self.directions[action_id] * self.settings["delta_p"]
-            if self.hero.position[0] -10 < 0 or self.hero.position[0] +10> self.settings["world_size"][0] or self.hero.position[1] -10 < 0 or self.hero.position[1] +10 > self.settings["world_size"][1]:
+            if self.hero.position[0] -10 < 0 or self.hero.position[0] +10> self.settings["world_size"][0] or self.hero.position[1] -10 < 0 or self.hero.position[1] +10 > self.settings["world_size"][1] or self.collided():
                 self.hero.position = pos 
-        self.time_stamp[2] = self.heading
+                self.colide = True
+        if self.settings['Rotation']:
+            self.time_stamp[2] = self.heading
         self.counter += 1
 
     def empty(self,array):
@@ -283,6 +295,8 @@ class Main(object):
             if(not(self.empty(self.maze))):
                 position = self.maze[self.mazeindex]
                 self.mazeindex += 1 
+                self.log.write(str([position[0],position[1]]))
+                self.log.write(" ")
                 self.darray.append(position)
             else:
                 empty = True
@@ -298,17 +312,20 @@ class Main(object):
         """Simulate all the objects for a given ammount of time.
 
         Also resolve collisions with the hero"""
-        self.time_stamp[3] = self.mazeObject.goalPos
         for obj in self.objects + [self.hero] :
-            if obj.obj_type == "enemy":
-                self.time_stamp[4] = obj.position 
             obj.step(dt)
-            if obj.obj_type == "hero" :
-                self.time_stamp[0] = obj.position
+        #print(self.hero.position)
         self.resolve_collisions(fps,actionEvery)
-        self.log.write(str(self.time_stamp))
-        self.log.write("\n")
-        self.time_stamp[5] = 0
+        if self.old_action == str([self.hero.position[0],self.hero.position[1]]):
+            self.repeat += 1
+        else:
+            self.log.write(str(self.repeat))
+            self.log.write('\n')
+            self.repeat = 0
+            self.old_action = str([self.hero.position[0],self.hero.position[1]])
+            self.time_stamp[0] = [self.hero.position[0],self.hero.position[1]]
+            self.log.write(str(self.time_stamp))
+            self.log.write("\n")
         
     def runComplete(self):
         self.timeOut = (self.counter)/self.minTime
@@ -329,7 +346,7 @@ class Main(object):
             self.successArray.append(1)
         self.runComplete()
         if ob.obj_type == "enemy" or ob.obj_type == "square":
-            self.time_stamp[5] = "crash"
+            self.log.write("crash \n")
             self.successArray.append(0)
             self.runFail()
         self.successRate = sum(self.successArray,0.0)/float(len(self.successArray))
@@ -448,6 +465,7 @@ class Main(object):
         obstarray = [obstpos]
         self.make_dmatrix(obstarray)
         self.minTime = self.calcmin()
+        return obstpos
 
     def reassign2(self):
         collision_distance = 2 * self.settings["object_radius"]
@@ -692,11 +710,12 @@ class Main(object):
     def nextMaze(self, obj):
         if obj.obj_type == "friend":
             print("score!")
-            self.time_stamp[5] = "score"
             if self.mazeIterator == 11:
-                self.reassign()
+                o = self.reassign()
+                self.log.write("score!" +str(self.mazeObject.getGoalPos())+ " "+str(o) + "\n")
             else:
                 self.reassign2()
+                self.log.write("score!"+str(self.mazeObject.getGoalPos())+ "\n")
             self.hero.position = self.mazeObject.getHeroPos()
             obj.position = self.mazeObject.getGoalPos()
             for obj in self.objects:
@@ -772,7 +791,7 @@ class Main(object):
             to_remove.append(obj)
             self.runs += 1
             self.object_reward += self.settings["object_reward"]["enemy"]
-            self.time_stamp[5] = "Timeout"
+            self.log.write('Timeout \n')
             print("Timeout")
         for obj in self.objects:
             if(obj.obj_type == "square"):
@@ -1052,6 +1071,8 @@ class Main(object):
         reward = self.currReward - curr
         if curr == 0:
             reward = 5
+        if self.colide:
+            reward = -1
         self.collected_rewards.append(reward)
         self.currReward = curr
         return reward
@@ -1110,8 +1131,11 @@ class Main(object):
         plt.savefig(self.pp, format='pdf')
 
     def plot_timing(self, smoothing = 30):
-        """Plot evolution of reward over time."""
+        """Plot evolution of reward over time."""    
         plottable = self.timeoutArray[:]
+        self.log.write("Timing Graph Data\n")
+        self.log.write(str(plottable))
+        self.log.close()
         while len(plottable) > 1000:
             for i in range(0, len(plottable) - 1, 2):
                 plottable[i//2] = (plottable[i] + plottable[i+1]) / 2

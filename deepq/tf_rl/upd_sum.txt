@@ -1,0 +1,10 @@
+Summary file for upd
+{'add_physics': False, 'objects': ['friend', 'enemy', 'square'], 'delta_v': 50, 'Timeout': 5, 'mod_observation': True, 'tolerable_distance_to_wall': 700, 'hero_initial_position': [600, 440], 'minimum_success_rate': 1.0, 'num_observation_lines': 32, 'hero_initial_speed': [0, 0], 'wall_distance_penalty': -0.0, 'delta_p': 20, 'add_psuedo_physics': False, 'object_reward': {'square': -100, 'enemy': -50, 'friend': 100}, 'accel': 50, 'hero_initial_accel': [0, 0], 'maximum_speed': [100, 100], 'world_size': (700, 500), 'hero_bounces_off_walls': False, 'num_objects': {'square': 1, 'enemy': 1, 'friend': 1}, 'speed': 0, 'colors': {'square': 'red', 'enemy': 'red', 'hero': 'yellow', 'friend': 'green'}, 'Rotation': False, 'object_radius': 10.0, 'observation_line_length': 120.0}
+
+Runs: 1
+successes: 0
+crashes: 0
+Timeouts: 1
+Failures: 1
+Failure Locations
+['timeout: [[365.0, 340.0], 4']
